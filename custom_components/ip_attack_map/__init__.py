@@ -8,7 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 
-from .const import DOMAIN
+from .const import DOMAIN, INTEGRATION_VERSION
 from .coordinator import IpAttackMapCoordinator
 from .frontend import async_ensure_card_assets, async_listen_for_card_frontend
 from .listener import NotificationListener, async_import_ip_bans
@@ -20,6 +20,7 @@ PLATFORMS = ["geo_location", "sensor"]
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Register the Lovelace card (once per Home Assistant, not per config entry)."""
+    _LOGGER.info("IP Attack Map integration loading (version %s)", INTEGRATION_VERSION)
     await async_ensure_card_assets(hass)
     async_listen_for_card_frontend(hass)
     return True

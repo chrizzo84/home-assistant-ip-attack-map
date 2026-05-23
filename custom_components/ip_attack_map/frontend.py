@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from homeassistant.components import frontend
+from homeassistant.components.frontend import DATA_EXTRA_MODULE_URL
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.components.lovelace import DOMAIN as LOVELACE_DOMAIN
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
@@ -37,8 +38,8 @@ LOVELACE_RESOURCES_STORAGE_VERSION = 1
 
 
 def card_module_url() -> str:
-    """Versioned Lovelace module URL (/local is most reliable after page reload)."""
-    return f"{LOCAL_CARD_URL}?v={INTEGRATION_VERSION}"
+    """Versioned Lovelace module URL (served by integration — always matches installed code)."""
+    return card_extra_module_url()
 
 
 def card_extra_module_url() -> str:
@@ -85,9 +86,9 @@ def _is_our_card_resource(url: str) -> bool:
 
 
 def _resource_is_current(url: str) -> bool:
-    """True when the stored Lovelace resource matches version and path."""
+    """True when the stored Lovelace resource matches version and preferred API path."""
     return (
-        _url_path(url) == LOCAL_CARD_URL
+        _url_path(url) == CARD_API_URL
         and _url_version(url) == INTEGRATION_VERSION
     )
 
@@ -210,20 +211,46 @@ async def async_register_static_path(hass: HomeAssistant) -> None:
     _LOGGER.debug("IP Attack Map card static path: %s", CARD_API_URL)
 
 
+def _frontend_extra_modules_ready(hass: HomeAssistant) -> bool:
+    """True when Home Assistant finished frontend setup (UrlManager exists)."""
+    return DATA_EXTRA_MODULE_URL in hass.data
+
+
 @callback
-def async_register_extra_module(hass: HomeAssistant) -> None:
+def async_register_extra_module(hass: HomeAssistant) -> bool:
     """Load card JS with the main frontend (Community Cards picker), not only Lovelace resources."""
+    if not _frontend_extra_modules_ready(hass):
+        _LOGGER.debug(
+            "Frontend extra module registry not ready yet; extra_js will retry after start"
+        )
+        return False
+
     module_url = card_extra_module_url()
     data = hass.data.setdefault(DOMAIN, {})
     previous = data.get("extra_module_url")
-    if previous and previous != module_url:
-        frontend.remove_extra_js_url(hass, previous)
-    if previous != module_url:
-        frontend.add_extra_js_url(hass, module_url)
+
+    try:
+        if previous and previous != module_url:
+            frontend.remove_extra_js_url(hass, previous)
+        if previous != module_url:
+            frontend.add_extra_js_url(hass, module_url)
+            _LOGGER.info(
+                "Registered IP Attack Map frontend module (extra_js): %s",
+                module_url,
+            )
+        else:
+            _LOGGER.debug(
+                "IP Attack Map frontend module (extra_js) already registered: %s",
+                module_url,
+            )
         data["extra_module_url"] = module_url
-        _LOGGER.info(
-            "Registered IP Attack Map frontend module (extra_js): %s", module_url
+        return True
+    except Exception:
+        _LOGGER.exception(
+            "Failed to register IP Attack Map frontend module (extra_js): %s",
+            module_url,
         )
+        return False
 
 
 def _copy_card_js(src: Path, dest: Path) -> None:
@@ -232,7 +259,9 @@ def _copy_card_js(src: Path, dest: Path) -> None:
     shutil.copy2(src, dest)
 
 
-async def async_publish_card_to_www(hass: HomeAssistant) -> None:
+async def async_publish_card_to_www(
+    hass: HomeAssistant, *, quiet: bool = False
+) -> None:
     """Publish card JS under /config/www so /local/… works after browser reload."""
     src = Path(__file__).parent / "www" / CARD_FILENAME
     if not src.is_file():
@@ -241,22 +270,27 @@ async def async_publish_card_to_www(hass: HomeAssistant) -> None:
 
     dest = Path(hass.config.path(LOCAL_REL_PATH))
     await hass.async_add_executor_job(_copy_card_js, src, dest)
-    _LOGGER.info("Published IP Attack Map card for Lovelace: %s", dest)
+    log = _LOGGER.debug if quiet else _LOGGER.info
+    log("Published IP Attack Map card for Lovelace: %s", dest)
 
 
-async def async_ensure_card_assets(hass: HomeAssistant) -> str:
+async def async_ensure_card_assets(
+    hass: HomeAssistant, *, quiet: bool = False
+) -> str:
     """Register HTTP path, publish /local copy, and Lovelace resource (call from async_setup)."""
     await async_register_static_path(hass)
-    async_register_extra_module(hass)
-    await async_publish_card_to_www(hass)
+    await async_publish_card_to_www(hass, quiet=quiet)
 
     module_url = card_module_url()
     hass.data.setdefault(DOMAIN, {})["card_module_url"] = module_url
-    await async_register_lovelace_resource(hass)
+    async_register_extra_module(hass)
+    await async_register_lovelace_resource(hass, quiet=quiet)
     return module_url
 
 
-async def async_register_lovelace_resource(hass: HomeAssistant) -> bool:
+async def async_register_lovelace_resource(
+    hass: HomeAssistant, *, quiet: bool = False
+) -> bool:
     """Create or update the Lovelace module resource for the card."""
     if not _lovelace_resource_storage_mode(hass):
         _LOGGER.info(
@@ -303,21 +337,24 @@ async def async_register_lovelace_resource(hass: HomeAssistant) -> bool:
                         "Removed duplicate IP Attack Map resource: %s",
                         item.get("url"),
                     )
-            _LOGGER.info(
-                "IP Attack Map Lovelace resource is current: %s",
+            log = _LOGGER.debug if quiet else _LOGGER.info
+            log(
+                "IP Attack Map Lovelace resource is current: %s (integration %s)",
                 current_items[0].get("url"),
+                INTEGRATION_VERSION,
             )
             return True
 
         try:
+            old_url = our_items[0].get("url", "")
             await resources.async_update_item(
                 our_items[0]["id"],
                 {"res_type": "module", "url": module_url},
             )
             _LOGGER.info(
-                "Updated IP Attack Map Lovelace resource: %s -> %s",
-                our_items[0].get("url"),
-                module_url,
+                "Aligned IP Attack Map Lovelace resource to integration %s (was %s)",
+                INTEGRATION_VERSION,
+                old_url,
             )
             for item in our_items[1:]:
                 await resources.async_delete_item(item["id"])
@@ -366,9 +403,13 @@ def async_listen_for_card_frontend(hass: HomeAssistant) -> None:
 
     async def _register_lovelace(_event: Any = None) -> None:
         await async_register_static_path(hass)
-        async_register_extra_module(hass)
-        await async_publish_card_to_www(hass)
-        await async_register_lovelace_resource(hass)
+        if not async_register_extra_module(hass):
+            _LOGGER.warning(
+                "IP Attack Map extra_js not registered yet; Community Cards may be "
+                "missing until the next retry"
+            )
+        await async_publish_card_to_www(hass, quiet=True)
+        await async_register_lovelace_resource(hass, quiet=True)
 
     @callback
     def _on_started(_event: Any) -> None:
