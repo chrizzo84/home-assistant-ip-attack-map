@@ -53,9 +53,31 @@ Es werden **keine** IPs an Dritte gesendet.
 
 IPs werden zur Auflösung an den gewählten Anbieter übermittelt.
 
-## Karte einrichten
+## Lovelace-Karte
 
-Lovelace-Beispiel (siehe auch [`docs/dashboard-map-card.yaml`](docs/dashboard-map-card.yaml)):
+Ab Version **1.1.0** gibt es eine **eigene Dashboard-Karte** (kein YAML nötig).
+
+1. Integration einrichten und **Home Assistant neu starten**
+2. Beim ersten Setup wird die Karten-Ressource in Lovelace eingetragen (Storage-Modus)
+3. Dashboard bearbeiten → **Karte hinzufügen** → nach **„IP Attack Map“** suchen
+4. Karte platzieren und speichern
+
+Die Karte zeigt Statistik (Heute / Bans / IPs), die eingebaute Weltkarte und eine kurze Angriffsliste.
+
+Optional per YAML (manuelle Karte):
+
+```yaml
+type: custom:ip-attack-map-card
+title: Login-Angriffe
+entities:
+  - zone.home
+default_zoom: 2
+show_list: true
+```
+
+### Nur eingebaute Map-Karte (ohne Custom Card)
+
+Siehe [`docs/dashboard-map-card.yaml`](docs/dashboard-map-card.yaml):
 
 ```yaml
 type: map
@@ -64,8 +86,11 @@ geo_location_sources:
 entities:
   - zone.home
 default_zoom: 2
-aspect_ratio: "16:9"
 ```
+
+### Entitäten auf der Karte
+
+`geo_location`-Marker pro Angreifer-IP sind **standardmäßig ausgeblendet** (nur für die Karte da, nicht in der Entitätenliste). Sichtbar bleiben die **Sensoren** (Attempts today, Active bans, …). Bereits angelegte Marker nach dem Update ggf. einmal unter Entitäten → Ausgeblendet prüfen oder Integration neu laden.
 
 ## Sensoren
 

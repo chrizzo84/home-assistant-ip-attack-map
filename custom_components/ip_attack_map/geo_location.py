@@ -5,6 +5,7 @@ from __future__ import annotations
 from homeassistant.components.geo_location import GeolocationEvent
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
@@ -56,6 +57,8 @@ class AttackGeoLocation(GeolocationEvent):
 
     _attr_source = SOURCE
     _attr_icon = "mdi:shield-alert"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_visible_default = False
 
     def __init__(self, coordinator: IpAttackMapCoordinator, ip: str) -> None:
         """Initialize entity."""
