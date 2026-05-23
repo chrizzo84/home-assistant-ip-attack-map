@@ -180,23 +180,47 @@ class IpAttackMapCard extends HTMLElement {
     this._initialized = true;
   }
 
-  _findSensor(suffix) {
-    return Object.values(this._hass.states).find(
+  _findOurSensor(suffix) {
+    const matches = Object.values(this._hass.states).filter(
       (s) =>
         s.entity_id.startsWith("sensor.") &&
-        (s.entity_id === `sensor.${suffix}` ||
-          s.entity_id.endsWith(`_${suffix}`)),
+        (s.entity_id.endsWith(`_${suffix}`) ||
+          s.entity_id === `sensor.${suffix}`),
+    );
+    return (
+      matches.find((s) => s.entity_id.includes("ip_attack_map")) ||
+      (matches.length === 1 ? matches[0] : null)
     );
   }
 
+  _sensorNumber(sensor) {
+    if (!sensor) return null;
+    const state = sensor.state;
+    if (state === "unavailable" || state === "unknown" || state === "") {
+      return null;
+    }
+    const value = Number(state);
+    return Number.isFinite(value) ? value : null;
+  }
+
   _statsFromAttacks(attacks) {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
     let bans = 0;
+    let attemptsToday = 0;
     for (const a of attacks) {
       if (a.attributes.banned) bans += 1;
+      const lastSeen = a.attributes.last_seen
+        ? new Date(a.attributes.last_seen)
+        : null;
+      if (lastSeen && lastSeen >= todayStart) {
+        attemptsToday += Number(a.attributes.attempt_count) || 1;
+      }
     }
     return {
       tracked: attacks.length,
       bans,
+      attemptsToday,
     };
   }
 
@@ -255,15 +279,16 @@ class IpAttackMapCard extends HTMLElement {
     card.header = this._config.title || "Login-Angriffe";
 
     const attacks = this._attackEntities();
-    const fallback = this._statsFromAttacks(attacks);
-    const attempts = this._findSensor("attempts_today");
-    const bans = this._findSensor("active_bans");
-    const tracked = this._findSensor("tracked_ips");
+    const computed = this._statsFromAttacks(attacks);
     const maxItems = this._config.max_list_items ?? 30;
 
-    const attemptsVal = attempts?.state ?? "—";
-    const bansVal = bans?.state ?? String(fallback.bans);
-    const trackedVal = tracked?.state ?? String(fallback.tracked);
+    const attemptsVal =
+      this._sensorNumber(this._findOurSensor("attempts_today")) ??
+      computed.attemptsToday;
+    const bansVal =
+      this._sensorNumber(this._findOurSensor("active_bans")) ?? computed.bans;
+    const trackedVal =
+      this._sensorNumber(this._findOurSensor("tracked_ips")) ?? computed.tracked;
 
     card.querySelector(".stats").innerHTML = `
       <div class="stat"><div class="stat-label">Heute</div><div class="stat-value">${this._escape(attemptsVal)}</div></div>
