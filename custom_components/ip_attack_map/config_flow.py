@@ -12,6 +12,7 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_validation as cv
 
 from .const import (
+    INTEGRATION_VERSION,
     CONF_CLOUD_API_KEY,
     CONF_CLOUD_PROVIDER,
     CONF_GEO_PROVIDER,
@@ -98,6 +99,9 @@ class IpAttackMapConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_abort(reason="single_instance_allowed")
 
         if user_input is None:
+            _LOGGER.info(
+                "IP Attack Map config flow started (version %s)", INTEGRATION_VERSION
+            )
             return self.async_show_form(
                 step_id="user",
                 data_schema=_geo_provider_schema(),
