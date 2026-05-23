@@ -13,7 +13,7 @@
         "description": "GeoLite2-City.mmdb von MaxMind herunterladen und den vollständigen Pfad auf diesem System angeben.",
         "data": {
           "maxmind_db_path": "Pfad zu GeoLite2-City.mmdb",
-          "whitelist": "IP-Whitelist (eine pro Zeile, CIDR möglich)",
+          "whitelist": "IP-Whitelist (eine pro Zeile, z. B. 192.168.0.0/16)",
           "hide_private_ips": "Private/lokale IPs ausblenden",
           "only_external_on_map": "Nur externe IPs auf der Karte",
           "retention_days": "Aufbewahrung (Tage)"
@@ -25,7 +25,7 @@
         "data": {
           "cloud_provider": "Cloud-Anbieter",
           "cloud_api_key": "API-Schlüssel (nur ipinfo.io)",
-          "whitelist": "IP-Whitelist (eine pro Zeile, CIDR möglich)",
+          "whitelist": "IP-Whitelist (eine pro Zeile, z. B. 192.168.0.0/16)",
           "hide_private_ips": "Private/lokale IPs ausblenden",
           "only_external_on_map": "Nur externe IPs auf der Karte",
           "retention_days": "Aufbewahrung (Tage)"

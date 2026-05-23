@@ -72,10 +72,7 @@ def _details_schema(*, cloud: bool) -> vol.Schema:
         fields[vol.Required(CONF_MAXMIND_DB_PATH)] = str
 
     fields[vol.Optional(CONF_WHITELIST, default="")] = selector.TextSelector(
-        selector.TextSelectorConfig(
-            multiline=True,
-            placeholder="192.168.0.0/16\n10.0.0.1",
-        )
+        selector.TextSelectorConfig(multiline=True)
     )
     fields[vol.Optional(CONF_HIDE_PRIVATE_IPS, default=DEFAULT_HIDE_PRIVATE_IPS)] = (
         cv.boolean
