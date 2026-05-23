@@ -143,14 +143,14 @@ cat /config/custom_components/ip_attack_map/manifest.json | grep version
 ```
 
 - Erste Zeile: **keine Ausgabe** (gut)  
-- Version: mindestens **`0.2.2`**
+- Version: mindestens **`0.2.3`**
 
 **Aktualisieren:**
 
 1. HACS → **IP Attack Map** → Menü (⋮) → **Neu herunterladen** (oder deinstallieren + neu installieren)  
 2. **Home Assistant vollständig neu starten** (wichtig – Python lädt den Config-Flow nur beim Start)  
 3. Beim erneuten Öffnen des Setup-Dialogs im Log sollte stehen:  
-   `IP Attack Map config flow started (version 0.2.2)`
+   `IP Attack Map config flow started (version 0.2.3)`
 
 **Manuell (falls HACS nicht aktualisiert):**
 
