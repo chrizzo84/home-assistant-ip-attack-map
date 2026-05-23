@@ -2,6 +2,8 @@
 
 Home-Assistant-Custom-Integration (HACS), die fehlgeschlagene Logins und IP-Bans aus der nativen HTTP-Integration auf einer Karte anzeigt.
 
+**Versionierung:** `0.x.x` = frühe Entwicklung (noch kein stabiles 1.0).
+
 ## Voraussetzungen
 
 In `configuration.yaml` (oder über die UI beim HTTP-Integration-Setup) sollte IP-Banning aktiv sein:
@@ -55,7 +57,7 @@ IPs werden zur Auflösung an den gewählten Anbieter übermittelt.
 
 ## Lovelace-Karte
 
-Ab Version **1.1.0** gibt es eine **Custom Card** für Statistik und Angriffsliste. Die **Weltkarte** ist eine normale HA-**Karte** darunter (vermeidet Leaflet-Fehler in Safari).
+Ab Version **0.2.0** gibt es eine **Custom Card** für Statistik und Angriffsliste. Die **Weltkarte** ist eine normale HA-**Karte** darunter (vermeidet Leaflet-Fehler in Safari).
 
 ### Ressource eintragen (wichtig)
 
@@ -103,7 +105,7 @@ Die JavaScript-Datei ist **nicht geladen**. Ressource prüfen:
 1. **Einstellungen → Dashboards → Ressourcen** → muss enthalten:  
    `/local/ip_attack_map/ip-attack-map-card.js` (Typ: **JavaScript-Modul**)
 2. Alte Einträge mit `/api/ip_attack_map/...` **entfernen** und nur `/local/...` verwenden
-3. Integration **1.1.2+** installieren → startet HA neu → kopiert die Datei nach `config/www/ip_attack_map/`
+3. Integration **0.2.0+** installieren → startet HA neu → kopiert die Datei nach `config/www/ip_attack_map/`
 4. **Cmd+Shift+R** in Safari, Dashboard neu laden
 
 ### Karte erscheint nicht unter „Karte hinzufügen“?
@@ -151,14 +153,14 @@ cat /config/custom_components/ip_attack_map/manifest.json | grep version
 ```
 
 - Erste Zeile: **keine Ausgabe** (gut)  
-- Version: mindestens **`1.0.4`**
+- Version: mindestens **`0.2.0`**
 
 **Aktualisieren:**
 
 1. HACS → **IP Attack Map** → Menü (⋮) → **Neu herunterladen** (oder deinstallieren + neu installieren)  
 2. **Home Assistant vollständig neu starten** (wichtig – Python lädt den Config-Flow nur beim Start)  
 3. Beim erneuten Öffnen des Setup-Dialogs im Log sollte stehen:  
-   `IP Attack Map config flow started (version 1.0.4)`
+   `IP Attack Map config flow started (version 0.2.0)`
 
 **Manuell (falls HACS nicht aktualisiert):**
 
