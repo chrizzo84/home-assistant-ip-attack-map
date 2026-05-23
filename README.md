@@ -55,38 +55,49 @@ IPs werden zur Auflösung an den gewählten Anbieter übermittelt.
 
 ## Lovelace-Karte
 
-Ab Version **1.1.0** gibt es eine **eigene Dashboard-Karte** (kein YAML nötig).
+Ab Version **1.1.0** gibt es eine **Custom Card** für Statistik und Angriffsliste. Die **Weltkarte** ist eine normale HA-**Karte** darunter (vermeidet Leaflet-Fehler in Safari).
 
-1. Integration einrichten und **Home Assistant neu starten**
-2. Beim ersten Setup wird die Karten-Ressource in Lovelace eingetragen (Storage-Modus)
-3. Dashboard bearbeiten → **Karte hinzufügen** → nach **„IP Attack Map“** suchen
-4. Karte platzieren und speichern
+### Ressource eintragen (wichtig)
 
-Die Karte zeigt Statistik (Heute / Bans / IPs), die eingebaute Weltkarte und eine kurze Angriffsliste.
+Die Karte erscheint nur, wenn die JavaScript-Datei geladen ist:
 
-Optional per YAML (manuelle Karte):
+1. **Einstellungen → Dashboards → Ressourcen → Ressource hinzufügen**
+2. URL: `/api/ip_attack_map/card/ip-attack-map-card.js`
+3. Typ: **JavaScript-Modul**
+4. Speichern, dann **Browser hart neu laden** (Cmd+Shift+R)
+
+Im **Storage-Modus** versucht die Integration das automatisch (ggf. Benachrichtigung, wenn du im **YAML-Modus** bist).
+
+Prüfen: die URL im Browser öffnen – es muss JavaScript-Text erscheinen, kein 404.
+
+### Dashboard aufbauen (empfohlen)
+
+**Stapel** mit zwei Karten – siehe [`docs/dashboard-stack.yaml`](docs/dashboard-stack.yaml):
+
+1. Dashboard bearbeiten → **Karte hinzufügen** → **Manuelle Karte** → YAML aus `dashboard-stack.yaml` einfügen  
+   **oder** einzeln:
+2. **IP Attack Map** (Custom Card) – Statistik + Liste  
+3. Normale **Karte** mit `geo_location_sources: ip_attack_map`
 
 ```yaml
-type: custom:ip-attack-map-card
-title: Login-Angriffe
-entities:
-  - zone.home
-default_zoom: 2
-show_list: true
+type: vertical-stack
+cards:
+  - type: custom:ip-attack-map-card
+    title: Login-Angriffe
+  - type: map
+    geo_location_sources:
+      - ip_attack_map
+    entities:
+      - zone.home
+    default_zoom: 2
 ```
 
-### Nur eingebaute Map-Karte (ohne Custom Card)
+### Karte erscheint nicht unter „Karte hinzufügen“?
 
-Siehe [`docs/dashboard-map-card.yaml`](docs/dashboard-map-card.yaml):
-
-```yaml
-type: map
-geo_location_sources:
-  - ip_attack_map
-entities:
-  - zone.home
-default_zoom: 2
-```
+- Ressource fehlt oder falsche URL → Schritt oben
+- Browser-Cache → Cmd+Shift+R
+- Nach HA-Neustart 30 s warten (Ressource wird nachgereicht)
+- Im Log: `Registered Lovelace resource for IP Attack Map card`
 
 ### Entitäten auf der Karte
 

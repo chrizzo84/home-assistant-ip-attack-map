@@ -1,21 +1,26 @@
+/**
+ * IP Attack Map Lovelace card (stats + attack list).
+ * Use a separate built-in "map" card with geo_location_sources: ip_attack_map for the map
+ * (embedding hui-map-card causes Leaflet errors in Safari / nested cards).
+ */
 class IpAttackMapCard extends HTMLElement {
   constructor() {
     super();
     this._config = null;
     this._hass = null;
-    this._mapCard = null;
     this._initialized = false;
   }
 
   static getStubConfig() {
     return {
       title: "Login-Angriffe",
-      entities: ["zone.home"],
-      default_zoom: 2,
-      aspect_ratio: "16:9",
-      hours_to_show: 168,
       show_list: true,
+      max_list_items: 12,
     };
+  }
+
+  static getConfigElement() {
+    return document.createElement("ip-attack-map-card-editor");
   }
 
   setConfig(config) {
@@ -32,7 +37,7 @@ class IpAttackMapCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 9;
+    return 4;
   }
 
   _ensureDom() {
@@ -54,25 +59,27 @@ class IpAttackMapCard extends HTMLElement {
         padding: 8px 10px;
         text-align: center;
       }
-      ip-attack-map-card .stat-label {
-        font-size: 0.75rem;
-        opacity: 0.8;
-      }
+      ip-attack-map-card .stat-label { font-size: 0.75rem; opacity: 0.8; }
       ip-attack-map-card .stat-value {
         font-size: 1.25rem;
         font-weight: 600;
         margin-top: 2px;
       }
-      ip-attack-map-card .map-wrap {
+      ip-attack-map-card .map-hint {
         margin: 12px 16px 0;
+        padding: 10px 12px;
         border-radius: 8px;
-        overflow: hidden;
-        min-height: 280px;
+        background: var(--secondary-background-color);
+        font-size: 0.85rem;
+        line-height: 1.4;
       }
-      ip-attack-map-card hui-map-card { display: block; height: 280px; }
+      ip-attack-map-card .map-hint code {
+        font-size: 0.8rem;
+        word-break: break-all;
+      }
       ip-attack-map-card .attack-list {
         padding: 8px 16px 16px;
-        max-height: 160px;
+        max-height: 220px;
         overflow-y: auto;
       }
       ip-attack-map-card .attack-row {
@@ -105,13 +112,10 @@ class IpAttackMapCard extends HTMLElement {
     card.innerHTML = `
       <div class="stats"></div>
       <div class="last-attacker"></div>
-      <div class="map-wrap"></div>
+      <div class="map-hint"></div>
       <div class="attack-list"></div>
     `;
     this.appendChild(card);
-
-    this._mapCard = document.createElement("hui-map-card");
-    card.querySelector(".map-wrap").appendChild(this._mapCard);
     this._initialized = true;
   }
 
@@ -153,7 +157,6 @@ class IpAttackMapCard extends HTMLElement {
     if (!this._config || !this._hass) return;
 
     this._ensureDom();
-
     const card = this.querySelector("ha-card");
     card.header = this._config.title || "Login-Angriffe";
 
@@ -163,6 +166,7 @@ class IpAttackMapCard extends HTMLElement {
     const last = this._findSensor("last_attacker");
     const attacks = this._attackEntities();
     const lastLabel = last?.state && last.state !== "unknown" ? last.state : "—";
+    const maxItems = this._config.max_list_items ?? 12;
 
     card.querySelector(".stats").innerHTML = `
       <div class="stat"><div class="stat-label">Heute</div><div class="stat-value">${attempts?.state ?? "—"}</div></div>
@@ -173,15 +177,12 @@ class IpAttackMapCard extends HTMLElement {
 
     card.querySelector(".last-attacker").textContent = `Zuletzt: ${lastLabel}`;
 
-    this._mapCard.hass = this._hass;
-    this._mapCard.config = {
-      type: "map",
-      geo_location_sources: ["ip_attack_map"],
-      entities: this._config.entities || ["zone.home"],
-      default_zoom: this._config.default_zoom ?? 2,
-      aspect_ratio: this._config.aspect_ratio ?? "16:9",
-      hours_to_show: this._config.hours_to_show ?? 168,
-    };
+    card.querySelector(".map-hint").innerHTML = `
+      <strong>Weltkarte:</strong> Füge darunter eine normale
+      <em>Karte</em>-Karte hinzu mit
+      <code>geo_location_sources: ip_attack_map</code>
+      (siehe README / docs/dashboard-stack.yaml).
+    `;
 
     const listEl = card.querySelector(".attack-list");
     if (this._config.show_list === false) {
@@ -191,21 +192,60 @@ class IpAttackMapCard extends HTMLElement {
       listEl.style.display = "";
       listEl.innerHTML = attacks.length
         ? attacks
-            .slice(0, 12)
+            .slice(0, maxItems)
             .map((a) => this._attackRow(a))
             .join("")
-        : `<div class="empty">Noch keine externen Angriffe auf der Karte. Fehlversuche von außen erscheinen hier automatisch.</div>`;
+        : `<div class="empty">Noch keine externen Angriffe erfasst.</div>`;
     }
   }
 }
 
+class IpAttackMapCardEditor extends HTMLElement {
+  setConfig(config) {
+    this._config = config;
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+  }
+
+  _valueChanged(ev) {
+    const field = ev.target.name;
+    const value =
+      ev.target.type === "checkbox" ? ev.target.checked : ev.target.value;
+    const config = { ...this._config, [field]: value };
+    this.dispatchEvent(
+      new CustomEvent("config-changed", {
+        bubbles: true,
+        composed: true,
+        detail: { config },
+      }),
+    );
+  }
+
+  connectedCallback() {
+    this.innerHTML = `
+      <div class="card-config">
+        <div>
+          <label>Titel</label>
+          <input name="title" type="text" value="${this._config?.title || "Login-Angriffe"}">
+        </div>
+      </div>
+    `;
+    this.querySelectorAll("input").forEach((el) => {
+      el.addEventListener("change", (ev) => this._valueChanged(ev));
+    });
+  }
+}
+
 customElements.define("ip-attack-map-card", IpAttackMapCard);
+customElements.define("ip-attack-map-card-editor", IpAttackMapCardEditor);
 
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: "custom:ip-attack-map-card",
   name: "IP Attack Map",
-  description: "Karte und Statistik für fehlgeschlagene Home-Assistant-Logins",
+  description: "Statistik und Angriffsliste für fehlgeschlagene HA-Logins",
   preview: true,
   documentationURL:
     "https://github.com/chrizzo84/home-assistant-ip-attack-map#lovelace-karte",

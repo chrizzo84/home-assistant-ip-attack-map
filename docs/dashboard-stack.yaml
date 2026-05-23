@@ -1,0 +1,13 @@
+# Recommended dashboard layout: stats card + native map (no Leaflet nesting issues)
+type: vertical-stack
+cards:
+  - type: custom:ip-attack-map-card
+    title: Login-Angriffe
+  - type: map
+    title: Angriffe auf der Karte
+    geo_location_sources:
+      - ip_attack_map
+    entities:
+      - zone.home
+    default_zoom: 2
+    aspect_ratio: "16:9"

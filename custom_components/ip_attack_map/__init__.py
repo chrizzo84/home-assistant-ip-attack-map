@@ -10,7 +10,7 @@ from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN
 from .coordinator import IpAttackMapCoordinator
-from .frontend import async_register_frontend, async_register_lovelace_resource
+from .frontend import async_register_frontend, async_schedule_lovelace_resource
 from .listener import NotificationListener, async_import_ip_bans
 
 _LOGGER = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await async_import_ip_bans(hass, coordinator)
     await coordinator.async_refresh()
 
-    await async_register_lovelace_resource(hass)
+    async_schedule_lovelace_resource(hass)
 
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     return True
