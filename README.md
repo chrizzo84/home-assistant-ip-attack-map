@@ -1,12 +1,42 @@
 # IP Attack Map
 
-Home-Assistant-Custom-Integration (HACS), die fehlgeschlagene Logins und IP-Bans aus der nativen HTTP-Integration auf einer Karte anzeigt.
+A [Home Assistant](https://www.home-assistant.io/) custom integration (install via [HACS](https://hacs.xyz/)) that visualizes failed HTTP logins and IP bans from Home Assistant’s built-in HTTP integration on a **Lovelace dashboard** — with stats, an attack table, and a world map.
 
-**Versionierung:** `0.x.x` = frühe Entwicklung (noch kein stabiles 1.0).
+**Versioning:** `0.x.x` means early development (not a stable 1.0 API yet).
 
-## Voraussetzungen
+## What it does
 
-In `configuration.yaml` (oder über die UI beim HTTP-Integration-Setup) sollte IP-Banning aktiv sein:
+Home Assistant can log failed login attempts and ban abusive IPs when you enable IP banning on the HTTP integration. IP Attack Map listens for those events, enriches each IP with geolocation, and exposes:
+
+- **Sensors** — attempts today, active bans, last attacker, tracked IP count  
+- **`geo_location` entities** — one marker per attacker (for the native Map card)  
+- **Custom Lovelace card** — summary tiles plus a sortable attack table  
+- **Import of existing bans** — reads `ip_bans.yaml` on startup and uses each entry’s `banned_at` timestamp  
+
+No separate log parser or external database is required.
+
+## Features
+
+| Feature | Description |
+|--------|-------------|
+| Login capture | Subscribes to HA persistent notifications (`http-login`, `ip-ban`) |
+| Ban import | Loads `/config/ip_bans.yaml` and preserves real ban dates |
+| GeoIP | **MaxMind GeoLite2** (local, recommended) or **cloud** (ip-api.com / ipinfo.io) |
+| Map markers | `geo_location` source `ip_attack_map` for the standard Map card |
+| Custom card | Built-in `ip-attack-map-card` — no manual `www/` copy |
+| Auto Lovelace resource | Registers and updates `/local/ip_attack_map/ip-attack-map-card.js?v=…` on startup |
+| Filtering | IP whitelist, hide private IPs, external-only map, retention days |
+| Privacy-friendly defaults | Private IPs hidden; MaxMind keeps lookups on your host |
+
+## Requirements
+
+- Home Assistant **2023.1** or newer (see `hacs.json`)  
+- [HACS](https://hacs.xyz/) for the recommended install path  
+- HTTP integration with **IP banning** enabled  
+
+### Enable HTTP login banning
+
+In `configuration.yaml` (or via the HTTP integration UI):
 
 ```yaml
 http:
@@ -14,160 +44,267 @@ http:
   login_attempts_threshold: 5
 ```
 
-### Reverse Proxy (Nginx, Traefik, …)
+Adjust the threshold to taste. Failed logins are counted; when the limit is reached, HA bans the IP and writes it to `ip_bans.yaml`.
 
-Damit die **echte Client-IP** erfasst wird (nicht die Proxy-IP):
+### Reverse proxy (Nginx, Traefik, Cloudflare, …)
+
+To record the **real client IP** instead of the proxy:
 
 ```yaml
 http:
   use_x_forwarded_for: true
   trusted_proxies:
-    - 192.168.1.0/24
+    - 192.168.1.0/24   # your proxy/LAN
 ```
 
-## Installation (HACS)
+Add every hop that terminates TLS in front of Home Assistant.
 
-1. HACS → Integrations → Custom repositories  
-2. Repository-URL: `https://github.com/chrizzo84/home-assistant-ip-attack-map`  
-3. Kategorie: **Integration**  
-4. **IP Attack Map** installieren und Home Assistant neu starten  
-5. Einstellungen → Geräte & Dienste → Integration hinzufügen → **IP Attack Map**
+## Installation
 
-### Manuelle Installation
+### HACS (recommended)
 
-Kopiere `custom_components/ip_attack_map` nach `config/custom_components/` und starte Home Assistant neu.
+1. Open **HACS** → **Integrations** → **⋮** → **Custom repositories**  
+2. Add repository: `https://github.com/chrizzo84/home-assistant-ip-attack-map`  
+3. Category: **Integration**  
+4. Install **IP Attack Map**  
+5. **Restart Home Assistant** (full restart, not only reload)  
+6. Go to **Settings** → **Devices & services** → **Add integration** → **IP Attack Map**  
+7. Complete the setup wizard (geolocation + options)
 
-## Geolocation
+After updates, use **HACS** → **IP Attack Map** → **Redownload**, then restart HA again so Python and the Lovelace card reload.
 
-### MaxMind GeoLite2 (empfohlen, lokal)
+### Manual install
 
-1. Kostenlosen Account auf [MaxMind](https://www.maxmind.com/en/geolite2/signup) anlegen  
-2. **GeoLite2-City** (`.mmdb`) herunterladen  
-3. Datei auf den HA-Host legen (z. B. `/config/GeoLite2-City.mmdb`)  
-4. Pfad im Config-Flow angeben  
+Copy the folder `custom_components/ip_attack_map` into your config directory:
 
-Es werden **keine** IPs an Dritte gesendet.
+```text
+config/
+  custom_components/
+    ip_attack_map/
+      ...
+```
 
-### Cloud (ip-api.com / ipinfo.io)
+Restart Home Assistant and add the integration from **Devices & services**.
 
-- **ip-api.com**: kostenlos, Rate-Limit beachten  
-- **ipinfo.io**: optional API-Token  
+## Configuration
 
-IPs werden zur Auflösung an den gewählten Anbieter übermittelt.
+The config flow has two main steps.
 
-## Lovelace-Karte
+### 1. Geolocation provider
 
-Die Integration bringt die **Custom Card** mit und registriert sie **automatisch** — keine manuelle Ressource, kein Kopieren nach `www/`.
+**MaxMind GeoLite2 (recommended, local)**
 
-Nach Installation und Neustart:
+1. Create a free account at [MaxMind](https://www.maxmind.com/en/geolite2/signup)  
+2. Download **GeoLite2 City** (`.mmdb`)  
+3. Copy the file to your HA host (e.g. `/config/GeoLite2-City.mmdb`)  
+4. Enter the full path in the integration setup  
 
-1. Dashboard bearbeiten → **Karte hinzufügen** → **IP Attack Map** (oder Stapel-YAML unten)
-2. Optional darunter eine normale **Karte** mit `geo_location_sources: ip_attack_map` (Weltkarte; vermeidet Leaflet-Probleme in Safari)
+IPs are **not** sent to third parties. The `geoip2` package is installed automatically when you choose MaxMind.
 
-Die Karte liefert **Statistik + Angriffstabelle**; die Weltkarte ist eine separate HA-**Karte**.
+**Cloud**
 
-### Dashboard aufbauen (empfohlen)
+| Provider | Notes |
+|----------|--------|
+| **ip-api.com** | Free tier; respect rate limits |
+| **ipinfo.io** | Optional API token for higher limits |
 
-**Stapel** mit zwei Karten – siehe [`docs/dashboard-stack.yaml`](docs/dashboard-stack.yaml):
+Client IPs are sent to the selected provider for lookup.
 
-1. Dashboard bearbeiten → **Karte hinzufügen** → **Manuelle Karte** → YAML aus `dashboard-stack.yaml` einfügen  
-   **oder** einzeln:
-2. **IP Attack Map** (Custom Card) – Statistik + Liste  
-3. Normale **Karte** mit `geo_location_sources: ip_attack_map`
+### 2. Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| **IP whitelist** | empty | Comma-separated IPs or CIDR ranges to ignore (LAN, Docker, reverse proxy) |
+| **Hide private IPs** | on | Do not track RFC1918 / local addresses |
+| **Only external IPs on map** | on | Map markers only for public IPs |
+| **Retention (days)** | 30 | Remove old **non-banned** attack records after N days |
+
+**Banned IPs** from `ip_bans.yaml` are kept until Home Assistant removes the ban, regardless of retention.
+
+You can change options later via **Configure** on the integration card.
+
+## Dashboard setup
+
+The integration ships a **custom Lovelace card** and registers it automatically. You do **not** need to add a manual resource or copy files into `www/` (unless you use Lovelace entirely in YAML mode — see troubleshooting).
+
+### Recommended layout: vertical stack
+
+Use two cards: **IP Attack Map** (stats + table) and the native **Map** card (world map). This avoids Leaflet issues in some browsers when editing stacked cards.
+
+**Option A — UI:** Edit dashboard → **Add card** → search for **IP Attack Map**.
+
+**Option B — YAML:** Add a **Manual** card and paste the example from [`docs/dashboard-stack.yaml`](docs/dashboard-stack.yaml):
 
 ```yaml
 type: vertical-stack
 cards:
   - type: custom:ip-attack-map-card
-    title: Login-Angriffe
+    title: Login attacks
     show_list: true
+    show_map_hint: false
     max_list_items: 50
   - type: map
+    title: Attacks on the map
     geo_location_sources:
       - ip_attack_map
     entities:
       - zone.home
     default_zoom: 2
+    aspect_ratio: "16:9"
 ```
 
-Die Custom Card zeigt eine **Tabelle**: IP/Host, Herkunft (Stadt/Land/ISP), Versuche, **Gebannt** oder **Aktiv**, Zeitpunkt.
+### Custom card columns
 
-### Karte lädt nicht („Custom element doesn't exist“)
+| Column | Content |
+|--------|---------|
+| IP / Host | Attacker IP; hostname when known |
+| Origin | City, region, country, ISP/org |
+| Attempts | Failed login count for this IP |
+| Status | **Banned** or **Active** |
+| Date | Ban time from `ip_bans.yaml` (`banned_at`), or last login attempt for active IPs |
 
-1. Integration auf **0.2.3+** aktualisieren (HACS) und **Home Assistant neu starten**
-2. Einmal **hart neu laden** (Cmd+Shift+R), Dashboard neu öffnen
-3. Im Log sollten erscheinen: `Published IP Attack Map card for Lovelace` und `Registered IP Attack Map Lovelace resource` (URL `/local/ip_attack_map/...`)
-4. Unter **Einstellungen → Dashboards → Ressourcen** darf höchstens **ein** Eintrag stehen:  
-   `/local/ip_attack_map/ip-attack-map-card.js?v=…` (Typ **JavaScript-Modul**). Ab **0.3.0** wird die URL beim Start automatisch auf die aktuelle Version gesetzt (auch wenn früher ein Tippfehler wie `ip_attack_map-card.js` eingetragen war). Alte `/api/...`-Einträge werden entfernt.
-5. **Rote Vorschau nur im Karten-Editor?** Speichern, Dashboard normal öffnen (nicht Bearbeiten) — die Editor-Vorschau lädt Ressourcen manchmal zu spät.
+### Stat tiles
 
-Nur bei **Lovelace komplett in YAML** (selten): Ressource einmalig in `ui-lovelace.yaml` eintragen — URL wie oben, Typ `module`.
+| Tile | Meaning |
+|------|---------|
+| **Today** | Failed login attempts today (sensor + live data) |
+| **Bans** | IPs currently marked banned |
+| **IPs** | Tracked attacker IPs |
+| **On map** | `geo_location` entities shown on the map |
 
-### Safari: `_leaflet_pos` in der Karten-Vorschau
+### Card options (YAML / UI editor)
 
-Das betrifft die **normale HA-Karte** (Leaflet), oft in der **Bearbeitungsvorschau** eines Stapels — nicht die Custom Card. Nach **Speichern** und **Cmd+Shift+R** sollte die Karte im Dashboard laufen; im Editor kann Safari 26.x weiter zicken. Trenne die Karten testweise (nur Tabelle, nur Karte) oder nutze Chrome/Firefox zum Bearbeiten.
+| Key | Default | Description |
+|-----|---------|-------------|
+| `title` | Login attacks | Card header |
+| `show_list` | `true` | Show attack table |
+| `show_map_hint` | `false` | Show hint to add a Map card below |
+| `max_list_items` | `30` | Max table rows (5–100) |
 
-### Entitäten auf der Karte
+## Entities
 
-`geo_location`-Marker pro Angreifer-IP sind **standardmäßig ausgeblendet** (nur für die Karte da, nicht in der Entitätenliste). Sichtbar bleiben die **Sensoren** (Attempts today, Active bans, …). Bereits angelegte Marker nach dem Update ggf. einmal unter Entitäten → Ausgeblendet prüfen oder Integration neu laden.
+### Sensors (diagnostic)
 
-## Sensoren
+Linked to the **IP Attack Map** device. Entity IDs depend on your instance (e.g. `sensor.ip_attack_map_attempts_today`).
 
-| Entity | Bedeutung |
-|--------|-----------|
-| Attempts today | Fehlversuche heute |
-| Active bans | Gebannte IPs in der Registry |
-| Last attacker | Letzter Angreifer (IP · Stadt · Land) |
-| Tracked IPs | Anzahl erfasster IPs |
+| Sensor | Description |
+|--------|-------------|
+| **Attempts today** | Failed HTTP logins since midnight |
+| **Active bans** | Banned IPs in the registry |
+| **Last attacker** | Most recent attacker (IP · city · country) |
+| **Tracked IPs** | Number of IPs in the registry |
 
-## Optionen
+### Map (`geo_location`)
 
-- **IP-Whitelist**: LAN, Supervisor, Proxy (CIDR möglich)  
-- **Private IPs ausblenden**: Standard `true`  
-- **Nur externe IPs auf Karte**: Standard `true`  
-- **Aufbewahrung**: alte Einträge werden nach X Tagen entfernt  
+One entity per external attacker IP, source **`ip_attack_map`**. These entities are **hidden from the default entity list** by design (they exist for the Map card). Use **Settings** → **Entities** → **Hidden** if you need to inspect them.
 
-## Datenschutz
+Attributes include `ip`, `country`, `city`, `attempt_count`, `banned`, `banned_at`, `last_seen`, and more.
 
-- Angriffs-IPs werden lokal in einer HA-Storage-Datei gespeichert  
-- Bei Cloud-GeoIP werden IPs an den gewählten Anbieter gesendet  
-- MaxMind verarbeitet alles lokal auf deinem System  
+## How data flows
 
-## Fehlerbehebung: `placeholder` / `TextSelector` im Log
+```text
+Failed login / IP ban
+        ↓
+HA HTTP integration → persistent notification
+        ↓
+IP Attack Map listener → coordinator registry
+        ↓
+GeoIP lookup (MaxMind or cloud) + storage cache
+        ↓
+geo_location entities + sensors + Lovelace card
+```
 
-Wenn im Log noch `selector.TextSelector` oder `placeholder` vorkommt, läuft auf deinem System **nicht** der aktuelle Code aus dem Repository – das hat nichts mit der Home-Assistant-Version zu tun.
+On startup, existing entries in **`/config/ip_bans.yaml`** are imported. The **`banned_at`** field from YAML is used for display and sorting, not the time of the last HA restart.
 
-**Prüfen (Terminal / SSH / „Terminal & SSH“-Add-on):**
+## Privacy & data storage
+
+- Attack records are stored locally in Home Assistant storage (`.storage/ip_attack_map_cache_*`)  
+- Cloud GeoIP sends IPs to the provider you choose  
+- MaxMind lookups run entirely on your system  
+- No telemetry is sent to the integration author  
+
+## Troubleshooting
+
+### Custom element doesn’t exist (`ip-attack-map-card`)
+
+1. Install **0.3.0+** via HACS and **restart Home Assistant**  
+2. Hard-refresh the browser (e.g. Cmd+Shift+R)  
+3. Check logs for:  
+   - `Published IP Attack Map card for Lovelace`  
+   - `Updated IP Attack Map Lovelace resource` or `Registered IP Attack Map Lovelace resource`  
+4. **Settings** → **Dashboards** → **Resources** — you should have **one** entry:  
+   `/local/ip_attack_map/ip-attack-map-card.js?v=0.3.0`  
+   Type: **JavaScript module**  
+   From **0.3.0**, the URL is updated automatically on startup (including fixing old typo URLs like `ip_attack_map-card.js`). Remove duplicate or `/api/...` entries if any remain.  
+5. Red preview **only in the card editor?** Save the dashboard and open it in normal view — the editor sometimes loads resources late.
+
+### Lovelace resources in YAML mode
+
+If `resource_mode` is **yaml**, automatic registration is skipped. Add once to `configuration.yaml` or `ui-lovelace.yaml`:
+
+```yaml
+lovelace:
+  mode: storage
+  resources:
+    - url: /local/ip_attack_map/ip-attack-map-card.js?v=0.3.0
+      type: module
+```
+
+Restart HA after changing resources.
+
+### Map / Safari (`_leaflet_pos` errors)
+
+This usually affects the **native Map card** in the **dashboard editor preview**, not the custom IP Attack Map card. Save the dashboard, hard-refresh, or edit in Chrome/Firefox. Test the Map card alone if a vertical stack misbehaves in Safari.
+
+### Stats show dashes but the table works
+
+Reload the integration or restart HA. The card falls back to `geo_location` data when sensors are unavailable; **Today** uses the attempts sensor when present.
+
+### Wrong “today” counts or ban dates
+
+Ensure you are on **0.3.0+**. Old bans must use `banned_at` in `ip_bans.yaml`:
+
+```yaml
+203.0.113.10:
+  banned_at: "2025-07-02T22:55:39.820955+00:00"
+```
+
+Reload the integration after editing the ban file.
+
+### Verify installed version (SSH / Terminal add-on)
 
 ```bash
-grep -E 'TextSelector|placeholder' /config/custom_components/ip_attack_map/config_flow.py
-cat /config/custom_components/ip_attack_map/manifest.json | grep version
+grep version /config/custom_components/ip_attack_map/manifest.json
 ```
 
-- Erste Zeile: **keine Ausgabe** (gut)  
-- Version: mindestens **`0.2.3`**
+Expected: `"version": "0.3.0"` (or newer).
 
-**Aktualisieren:**
-
-1. HACS → **IP Attack Map** → Menü (⋮) → **Neu herunterladen** (oder deinstallieren + neu installieren)  
-2. **Home Assistant vollständig neu starten** (wichtig – Python lädt den Config-Flow nur beim Start)  
-3. Beim erneuten Öffnen des Setup-Dialogs im Log sollte stehen:  
-   `IP Attack Map config flow started (version 0.2.3)`
-
-**Manuell (falls HACS nicht aktualisiert):**
+If HACS did not update:
 
 ```bash
 rm -rf /config/custom_components/ip_attack_map
 ```
 
-Danach den Ordner `custom_components/ip_attack_map` aus dem [GitHub-Repository](https://github.com/chrizzo84/home-assistant-ip-attack-map/tree/main/custom_components/ip_attack_map) nach `/config/custom_components/` kopieren und HA neu starten.
+Then copy fresh files from [GitHub](https://github.com/chrizzo84/home-assistant-ip-attack-map/tree/main/custom_components/ip_attack_map) and restart.
 
-## Entwicklung
+### Stale config flow / `TextSelector` errors in logs
+
+That means an old copy of the integration is still on disk. Redownload via HACS, remove the folder manually if needed, and **fully restart** Home Assistant (the config flow is loaded at startup).
+
+## Development
 
 ```bash
-python -m pytest tests/
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-test.txt
+pytest tests/
 ```
 
-## Lizenz
+## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
+
+## Links
+
+- [GitHub repository](https://github.com/chrizzo84/home-assistant-ip-attack-map)  
+- [Issue tracker](https://github.com/chrizzo84/home-assistant-ip-attack-map/issues)
