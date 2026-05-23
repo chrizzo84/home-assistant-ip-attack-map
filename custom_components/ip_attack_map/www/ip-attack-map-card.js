@@ -184,12 +184,22 @@ class IpAttackMapCard extends HTMLElement {
     const matches = Object.values(this._hass.states).filter(
       (s) =>
         s.entity_id.startsWith("sensor.") &&
+        s.entity_id.includes("ip_attack_map") &&
         (s.entity_id.endsWith(`_${suffix}`) ||
-          s.entity_id === `sensor.${suffix}`),
+          s.entity_id === `sensor.ip_attack_map_${suffix}`),
     );
+    return matches[0] || null;
+  }
+
+  _isToday(isoString) {
+    if (!isoString) return false;
+    const date = new Date(isoString);
+    if (Number.isNaN(date.getTime())) return false;
+    const now = new Date();
     return (
-      matches.find((s) => s.entity_id.includes("ip_attack_map")) ||
-      (matches.length === 1 ? matches[0] : null)
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth() &&
+      date.getDate() === now.getDate()
     );
   }
 
@@ -204,17 +214,13 @@ class IpAttackMapCard extends HTMLElement {
   }
 
   _statsFromAttacks(attacks) {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
     let bans = 0;
     let attemptsToday = 0;
     for (const a of attacks) {
       if (a.attributes.banned) bans += 1;
-      const lastSeen = a.attributes.last_seen
-        ? new Date(a.attributes.last_seen)
-        : null;
-      if (lastSeen && lastSeen >= todayStart) {
-        attemptsToday += Number(a.attributes.attempt_count) || 1;
+      if (this._isToday(a.attributes.last_seen)) {
+        const count = Number(a.attributes.attempt_count);
+        attemptsToday += count > 0 ? count : 1;
       }
     }
     return {
@@ -282,9 +288,13 @@ class IpAttackMapCard extends HTMLElement {
     const computed = this._statsFromAttacks(attacks);
     const maxItems = this._config.max_list_items ?? 30;
 
+    const sensorAttempts = this._sensorNumber(
+      this._findOurSensor("attempts_today"),
+    );
     const attemptsVal =
-      this._sensorNumber(this._findOurSensor("attempts_today")) ??
-      computed.attemptsToday;
+      sensorAttempts != null
+        ? Math.max(sensorAttempts, computed.attemptsToday)
+        : computed.attemptsToday;
     const bansVal =
       this._sensorNumber(this._findOurSensor("active_bans")) ?? computed.bans;
     const trackedVal =

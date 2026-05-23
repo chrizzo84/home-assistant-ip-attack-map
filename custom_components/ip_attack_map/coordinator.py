@@ -329,6 +329,7 @@ class IpAttackMapCoordinator(DataUpdateCoordinator[dict[str, AttackRecord]]):
             self._notify_new_entity(ip)
 
         self.async_set_updated_data(self.attacks)
+        self.async_update_listeners()
         await self._persist_cache()
 
     async def async_import_ban(
@@ -376,6 +377,7 @@ class IpAttackMapCoordinator(DataUpdateCoordinator[dict[str, AttackRecord]]):
             self._notify_new_entity(ip)
 
         self.async_set_updated_data(self.attacks)
+        self.async_update_listeners()
         await self._persist_cache()
 
     @callback
