@@ -57,20 +57,14 @@ IPs werden zur Auflösung an den gewählten Anbieter übermittelt.
 
 ## Lovelace-Karte
 
-Ab Version **0.2.0** gibt es eine **Custom Card** für Statistik und Angriffsliste. Die **Weltkarte** ist eine normale HA-**Karte** darunter (vermeidet Leaflet-Fehler in Safari).
+Die Integration bringt die **Custom Card** mit und registriert sie **automatisch** — keine manuelle Ressource, kein Kopieren nach `www/`.
 
-### Ressource eintragen (wichtig)
+Nach Installation und Neustart:
 
-Die Karte erscheint nur, wenn die JavaScript-Datei geladen ist:
+1. Dashboard bearbeiten → **Karte hinzufügen** → **IP Attack Map** (oder Stapel-YAML unten)
+2. Optional darunter eine normale **Karte** mit `geo_location_sources: ip_attack_map` (Weltkarte; vermeidet Leaflet-Probleme in Safari)
 
-1. **Einstellungen → Dashboards → Ressourcen → Ressource hinzufügen**
-2. URL: `/local/ip_attack_map/ip-attack-map-card.js` (wird bei Setup automatisch nach `/config/www/` kopiert)
-3. Typ: **JavaScript-Modul**
-4. Speichern, dann **Browser hart neu laden** (Cmd+Shift+R)
-
-Im **Storage-Modus** versucht die Integration das automatisch (ggf. Benachrichtigung, wenn du im **YAML-Modus** bist).
-
-Prüfen: die URL im Browser öffnen – es muss JavaScript-Text erscheinen, kein 404.
+Die Karte liefert **Statistik + Angriffstabelle**; die Weltkarte ist eine separate HA-**Karte**.
 
 ### Dashboard aufbauen (empfohlen)
 
@@ -98,22 +92,14 @@ cards:
 
 Die Custom Card zeigt eine **Tabelle**: IP/Host, Herkunft (Stadt/Land/ISP), Versuche, **Gebannt** oder **Aktiv**, Zeitpunkt.
 
-### „Custom element doesn't exist: ip-attack-map-card“
+### Karte lädt nicht („Custom element doesn't exist“)
 
-Die JavaScript-Datei ist **nicht geladen**. Ressource prüfen:
+1. Integration auf **0.2.1+** aktualisieren (HACS) und **Home Assistant neu starten**
+2. Einmal **hart neu laden** (Cmd+Shift+R), Dashboard neu öffnen
+3. Im Log sollten erscheinen: `registered as frontend module` und/oder `Registered IP Attack Map Lovelace resource`
+4. Alte manuelle Ressourcen unter **Einstellungen → Dashboards → Ressourcen** (z. B. `/local/ip_attack_map/...`) können **entfernt** werden — die Integration nutzt `/api/ip_attack_map/card/ip-attack-map-card.js`
 
-1. **Einstellungen → Dashboards → Ressourcen** → muss enthalten:  
-   `/local/ip_attack_map/ip-attack-map-card.js` (Typ: **JavaScript-Modul**)
-2. Alte Einträge mit `/api/ip_attack_map/...` **entfernen** und nur `/local/...` verwenden
-3. Integration **0.2.0+** installieren → startet HA neu → kopiert die Datei nach `config/www/ip_attack_map/`
-4. **Cmd+Shift+R** in Safari, Dashboard neu laden
-
-### Karte erscheint nicht unter „Karte hinzufügen“?
-
-- Ressource fehlt oder falsche URL → Schritt oben
-- Browser-Cache → Cmd+Shift+R
-- Nach HA-Neustart 60 s warten (Ressource wird nachgereicht)
-- Im Log: `Published IP Attack Map card to` und `Registered Lovelace resource`
+Nur bei **Lovelace komplett in YAML** (selten): Ressource einmalig in `ui-lovelace.yaml` eintragen — URL wie oben, Typ `module`.
 
 ### Entitäten auf der Karte
 
@@ -153,14 +139,14 @@ cat /config/custom_components/ip_attack_map/manifest.json | grep version
 ```
 
 - Erste Zeile: **keine Ausgabe** (gut)  
-- Version: mindestens **`0.2.0`**
+- Version: mindestens **`0.2.1`**
 
 **Aktualisieren:**
 
 1. HACS → **IP Attack Map** → Menü (⋮) → **Neu herunterladen** (oder deinstallieren + neu installieren)  
 2. **Home Assistant vollständig neu starten** (wichtig – Python lädt den Config-Flow nur beim Start)  
 3. Beim erneuten Öffnen des Setup-Dialogs im Log sollte stehen:  
-   `IP Attack Map config flow started (version 0.2.0)`
+   `IP Attack Map config flow started (version 0.2.1)`
 
 **Manuell (falls HACS nicht aktualisiert):**
 
