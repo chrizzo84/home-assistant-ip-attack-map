@@ -184,9 +184,20 @@ class IpAttackMapCard extends HTMLElement {
     return Object.values(this._hass.states).find(
       (s) =>
         s.entity_id.startsWith("sensor.") &&
-        s.entity_id.includes("ip_attack_map") &&
-        s.entity_id.endsWith(suffix),
+        (s.entity_id === `sensor.${suffix}` ||
+          s.entity_id.endsWith(`_${suffix}`)),
     );
+  }
+
+  _statsFromAttacks(attacks) {
+    let bans = 0;
+    for (const a of attacks) {
+      if (a.attributes.banned) bans += 1;
+    }
+    return {
+      tracked: attacks.length,
+      bans,
+    };
   }
 
   _attackEntities() {
@@ -243,16 +254,21 @@ class IpAttackMapCard extends HTMLElement {
     const card = this.querySelector("ha-card");
     card.header = this._config.title || "Login-Angriffe";
 
+    const attacks = this._attackEntities();
+    const fallback = this._statsFromAttacks(attacks);
     const attempts = this._findSensor("attempts_today");
     const bans = this._findSensor("active_bans");
     const tracked = this._findSensor("tracked_ips");
-    const attacks = this._attackEntities();
     const maxItems = this._config.max_list_items ?? 30;
 
+    const attemptsVal = attempts?.state ?? "—";
+    const bansVal = bans?.state ?? String(fallback.bans);
+    const trackedVal = tracked?.state ?? String(fallback.tracked);
+
     card.querySelector(".stats").innerHTML = `
-      <div class="stat"><div class="stat-label">Heute</div><div class="stat-value">${attempts?.state ?? "—"}</div></div>
-      <div class="stat"><div class="stat-label">Bans</div><div class="stat-value">${bans?.state ?? "—"}</div></div>
-      <div class="stat"><div class="stat-label">IPs</div><div class="stat-value">${tracked?.state ?? "—"}</div></div>
+      <div class="stat"><div class="stat-label">Heute</div><div class="stat-value">${this._escape(attemptsVal)}</div></div>
+      <div class="stat"><div class="stat-label">Bans</div><div class="stat-value">${this._escape(bansVal)}</div></div>
+      <div class="stat"><div class="stat-label">IPs</div><div class="stat-value">${this._escape(trackedVal)}</div></div>
       <div class="stat"><div class="stat-label">Auf Karte</div><div class="stat-value">${attacks.length}</div></div>
     `;
 

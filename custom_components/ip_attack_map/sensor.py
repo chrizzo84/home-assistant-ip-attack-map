@@ -5,6 +5,7 @@ from __future__ import annotations
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -35,6 +36,14 @@ class IpAttackMapSensor(CoordinatorEntity[IpAttackMapCoordinator], SensorEntity)
 
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Link sensors to the config entry device (stable entity_id prefix)."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.coordinator.entry.entry_id)},
+            name="IP Attack Map",
+        )
 
 
 class AttemptsTodaySensor(IpAttackMapSensor):
