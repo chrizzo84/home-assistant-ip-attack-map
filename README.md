@@ -127,7 +127,12 @@ You can change options later via **Configure** on the integration card.
 
 The integration ships a **custom Lovelace card** and registers it automatically. You do **not** need to add a manual resource or copy files into `www/` (unless you use Lovelace entirely in YAML mode — see troubleshooting).
 
-After the Lovelace resource loads, the card appears under **Community cards** in the card picker (German UI: **Community-Karten**). That list is built from `window.customCards` in the card script — it is not the separate HACS **Frontend** plugin catalog.
+After the integration loads its frontend module, the card appears under **Community cards** in the card picker (German UI: **Community-Karten**). That list is built from `window.customCards` when the card JavaScript runs — it is not the separate HACS **Frontend** plugin catalog.
+
+From **0.3.2**, the card is registered in two ways:
+
+1. **`frontend.add_extra_js_url`** — loads with the main Home Assistant UI (same as other community cards you see in the picker).
+2. **Lovelace resources** — `/local/ip_attack_map/ip-attack-map-card.js?v=…` for dashboards that rely on stored resources.
 
 ### Recommended layout: vertical stack
 
@@ -227,17 +232,17 @@ On startup, existing entries in **`/config/ip_bans.yaml`** are imported. The **`
 
 ## Troubleshooting
 
-### Custom element doesn’t exist (`ip-attack-map-card`)
+### Card missing from Community cards / custom element doesn’t exist
 
-1. Install **0.3.0+** via HACS and **restart Home Assistant**  
-2. Hard-refresh the browser (e.g. Cmd+Shift+R)  
+1. Install **0.3.2+** via HACS and **restart Home Assistant** (full restart).  
+2. Hard-refresh the browser (e.g. Cmd+Shift+R), then open **Add card** → **Community cards** and search for **IP Attack Map**.  
 3. Check logs for:  
+   - `Registered IP Attack Map frontend module (extra_js): /api/ip_attack_map/card/ip-attack-map-card.js?v=…`  
    - `Published IP Attack Map card for Lovelace`  
-   - `Updated IP Attack Map Lovelace resource` or `Registered IP Attack Map Lovelace resource`  
-4. **Settings** → **Dashboards** → **Resources** — you should have **one** entry:  
-   `/local/ip_attack_map/ip-attack-map-card.js?v=0.3.0`  
-   Type: **JavaScript module**  
-   From **0.3.0**, the URL is updated automatically on startup (including fixing old typo URLs like `ip_attack_map-card.js`). Remove duplicate or `/api/...` entries if any remain.  
+   - `Registered` or `Updated IP Attack Map Lovelace resource`  
+4. **Settings** → **Dashboards** → **Resources** — ideally **one** entry:  
+   `/local/ip_attack_map/ip-attack-map-card.js?v=0.3.2` (type **JavaScript module**).  
+   If it is missing but `extra_js` is in the log, the picker should still work after a browser refresh.  
 5. Red preview **only in the card editor?** Save the dashboard and open it in normal view — the editor sometimes loads resources late.
 
 ### Lovelace resources in YAML mode
