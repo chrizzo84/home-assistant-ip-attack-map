@@ -1,13 +1,13 @@
 {
   "domain": "ip_attack_map",
   "name": "IP Attack Map",
-  "codeowners": ["@chrizzo84"],
+  "codeowners": ["@local"],
   "config_flow": true,
   "dependencies": ["frontend", "http"],
-  "documentation": "https://github.com/chrizzo84/home-assistant-ip-attack-map",
+  "documentation": "https://github.com/local/home-assistant-ip-attack-map",
   "integration_type": "service",
   "iot_class": "local_polling",
-  "issue_tracker": "https://github.com/chrizzo84/home-assistant-ip-attack-map/issues",
+  "issue_tracker": "https://github.com/local/home-assistant-ip-attack-map/issues",
   "requirements": [],
-  "version": "0.2.2"
+  "version": "0.2.1"
 }
