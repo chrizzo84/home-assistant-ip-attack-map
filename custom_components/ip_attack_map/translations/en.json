@@ -5,7 +5,7 @@
         "title": "IP Attack Map",
         "description": "Visualize failed Home Assistant login attempts on a map.",
         "data": {
-          "geo_provider": "Geolocation provider"
+          "geo_provider": "Geolocation provider (maxmind = local DB, cloud = ip-api/ipinfo)"
         }
       },
       "maxmind": {
@@ -13,7 +13,7 @@
         "description": "Download GeoLite2-City.mmdb from MaxMind and enter the full path on this system.",
         "data": {
           "maxmind_db_path": "Path to GeoLite2-City.mmdb",
-          "whitelist": "IP whitelist (one per line, CIDR allowed, e.g. 192.168.0.0/16)",
+          "whitelist": "IP whitelist (one per line or comma-separated, e.g. 192.168.0.0/16)",
           "hide_private_ips": "Hide private/local IPs",
           "only_external_on_map": "Only show external IPs on map",
           "retention_days": "Retention (days)"
@@ -23,9 +23,9 @@
         "title": "Cloud GeoIP",
         "description": "Look up IPs via a cloud API. IPs are sent to the provider.",
         "data": {
-          "cloud_provider": "Cloud provider",
+          "cloud_provider": "Cloud provider (ip_api or ipinfo)",
           "cloud_api_key": "API key (ipinfo.io only)",
-          "whitelist": "IP whitelist (one per line, CIDR allowed, e.g. 192.168.0.0/16)",
+          "whitelist": "IP whitelist (one per line or comma-separated, e.g. 192.168.0.0/16)",
           "hide_private_ips": "Hide private/local IPs",
           "only_external_on_map": "Only show external IPs on map",
           "retention_days": "Retention (days)"

@@ -9,7 +9,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers import config_validation as cv, selector
+from homeassistant.helpers import config_validation as cv
 
 from .const import (
     CONF_CLOUD_API_KEY,
@@ -32,25 +32,13 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-_GEO_PROVIDER_OPTIONS = [
-    {"value": GEO_PROVIDER_MAXMIND, "label": "MaxMind GeoLite2 (local)"},
-    {"value": GEO_PROVIDER_CLOUD, "label": "Cloud API"},
-]
-
-_CLOUD_PROVIDER_OPTIONS = [
-    {"value": CLOUD_PROVIDER_IP_API, "label": "ip-api.com (free)"},
-    {"value": CLOUD_PROVIDER_IPINFO, "label": "ipinfo.io"},
-]
-
 
 def _geo_provider_schema() -> vol.Schema:
+    """First step: choose geolocation backend (plain vol.In for broad HA compatibility)."""
     return vol.Schema(
         {
-            vol.Required(CONF_GEO_PROVIDER): selector.SelectSelector(
-                selector.SelectSelectorConfig(
-                    options=_GEO_PROVIDER_OPTIONS,
-                    mode=selector.SelectSelectorMode.DROPDOWN,
-                )
+            vol.Required(CONF_GEO_PROVIDER): vol.In(
+                [GEO_PROVIDER_MAXMIND, GEO_PROVIDER_CLOUD]
             ),
         }
     )
@@ -61,19 +49,15 @@ def _details_schema(*, cloud: bool) -> vol.Schema:
     fields: dict[vol.Marker, Any] = {}
 
     if cloud:
-        fields[vol.Required(CONF_CLOUD_PROVIDER)] = selector.SelectSelector(
-            selector.SelectSelectorConfig(
-                options=_CLOUD_PROVIDER_OPTIONS,
-                mode=selector.SelectSelectorMode.DROPDOWN,
-            )
+        fields[vol.Required(CONF_CLOUD_PROVIDER)] = vol.In(
+            [CLOUD_PROVIDER_IP_API, CLOUD_PROVIDER_IPINFO]
         )
         fields[vol.Optional(CONF_CLOUD_API_KEY, default="")] = str
     else:
         fields[vol.Required(CONF_MAXMIND_DB_PATH)] = str
 
-    fields[vol.Optional(CONF_WHITELIST, default="")] = selector.TextSelector(
-        selector.TextSelectorConfig(multiline=True)
-    )
+    # Plain str (no TextSelector) — avoids selector API differences between HA versions.
+    fields[vol.Optional(CONF_WHITELIST, default="")] = str
     fields[vol.Optional(CONF_HIDE_PRIVATE_IPS, default=DEFAULT_HIDE_PRIVATE_IPS)] = (
         cv.boolean
     )
@@ -213,9 +197,7 @@ class IpAttackMapOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional(
                     CONF_WHITELIST,
                     default="\n".join(self._entry.data.get(CONF_WHITELIST, [])),
-                ): selector.TextSelector(
-                    selector.TextSelectorConfig(multiline=True)
-                ),
+                ): str,
                 vol.Optional(
                     CONF_HIDE_PRIVATE_IPS,
                     default=self._entry.data.get(
@@ -250,9 +232,13 @@ class IpAttackMapOptionsFlow(config_entries.OptionsFlow):
 
 
 def _parse_whitelist(value: str | list[str]) -> list[str]:
-    """Parse whitelist from multiline string or list."""
+    """Parse whitelist from multiline or comma-separated string."""
     if isinstance(value, list):
         lines = value
     else:
-        lines = str(value or "").splitlines()
+        raw = str(value or "")
+        if "," in raw and "\n" not in raw:
+            lines = raw.split(",")
+        else:
+            lines = raw.splitlines()
     return [line.strip() for line in lines if line.strip()]

@@ -5,7 +5,7 @@
         "title": "IP Attack Map",
         "description": "Fehlgeschlagene Home-Assistant-Logins auf einer Karte anzeigen.",
         "data": {
-          "geo_provider": "Geolocation-Anbieter"
+          "geo_provider": "Geolocation-Anbieter (maxmind = lokal, cloud = ip-api/ipinfo)"
         }
       },
       "maxmind": {
@@ -13,7 +13,7 @@
         "description": "GeoLite2-City.mmdb von MaxMind herunterladen und den vollständigen Pfad auf diesem System angeben.",
         "data": {
           "maxmind_db_path": "Pfad zu GeoLite2-City.mmdb",
-          "whitelist": "IP-Whitelist (eine pro Zeile, z. B. 192.168.0.0/16)",
+          "whitelist": "IP-Whitelist (Zeilen oder kommagetrennt, z. B. 192.168.0.0/16)",
           "hide_private_ips": "Private/lokale IPs ausblenden",
           "only_external_on_map": "Nur externe IPs auf der Karte",
           "retention_days": "Aufbewahrung (Tage)"
@@ -23,9 +23,9 @@
         "title": "Cloud GeoIP",
         "description": "IPs über eine Cloud-API auflösen. IPs werden an den Anbieter übermittelt.",
         "data": {
-          "cloud_provider": "Cloud-Anbieter",
+          "cloud_provider": "Cloud-Anbieter (ip_api oder ipinfo)",
           "cloud_api_key": "API-Schlüssel (nur ipinfo.io)",
-          "whitelist": "IP-Whitelist (eine pro Zeile, z. B. 192.168.0.0/16)",
+          "whitelist": "IP-Whitelist (Zeilen oder kommagetrennt, z. B. 192.168.0.0/16)",
           "hide_private_ips": "Private/lokale IPs ausblenden",
           "only_external_on_map": "Nur externe IPs auf der Karte",
           "retention_days": "Aufbewahrung (Tage)"
