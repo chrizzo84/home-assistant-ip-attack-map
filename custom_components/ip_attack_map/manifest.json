@@ -1,0 +1,14 @@
+{
+  "domain": "ip_attack_map",
+  "name": "IP Attack Map",
+  "codeowners": ["@local"],
+  "config_flow": true,
+  "dependencies": [],
+  "after_dependencies": ["http"],
+  "documentation": "https://github.com/local/home-assistant-ip-attack-map",
+  "integration_type": "service",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/local/home-assistant-ip-attack-map/issues",
+  "requirements": ["geoip2>=4.8.0"],
+  "version": "1.0.0"
+}

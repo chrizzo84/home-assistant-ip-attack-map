@@ -1,0 +1,10 @@
+# Example Lovelace map card for IP Attack Map
+type: map
+title: Login attacks
+geo_location_sources:
+  - ip_attack_map
+entities:
+  - zone.home
+default_zoom: 2
+aspect_ratio: "16:9"
+hours_to_show: 168

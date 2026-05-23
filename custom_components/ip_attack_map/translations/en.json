@@ -1,0 +1,52 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "IP Attack Map",
+        "description": "Visualize failed Home Assistant login attempts on a map.",
+        "data": {
+          "geo_provider": "Geolocation provider"
+        }
+      },
+      "maxmind": {
+        "title": "MaxMind GeoLite2",
+        "description": "Download GeoLite2-City.mmdb from MaxMind and enter the full path on this system.",
+        "data": {
+          "maxmind_db_path": "Path to GeoLite2-City.mmdb",
+          "whitelist": "IP whitelist (one per line, CIDR allowed)",
+          "hide_private_ips": "Hide private/local IPs",
+          "only_external_on_map": "Only show external IPs on map",
+          "retention_days": "Retention (days)"
+        }
+      },
+      "cloud": {
+        "title": "Cloud GeoIP",
+        "description": "Look up IPs via a cloud API. IPs are sent to the provider.",
+        "data": {
+          "cloud_provider": "Cloud provider",
+          "cloud_api_key": "API key (ipinfo.io only)",
+          "whitelist": "IP whitelist (one per line, CIDR allowed)",
+          "hide_private_ips": "Hide private/local IPs",
+          "only_external_on_map": "Only show external IPs on map",
+          "retention_days": "Retention (days)"
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Only one IP Attack Map instance is allowed."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "IP Attack Map options",
+        "data": {
+          "whitelist": "IP whitelist",
+          "hide_private_ips": "Hide private/local IPs",
+          "only_external_on_map": "Only show external IPs on map",
+          "retention_days": "Retention (days)"
+        }
+      }
+    }
+  }
+}
