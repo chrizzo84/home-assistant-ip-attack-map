@@ -419,14 +419,19 @@ if (!customElements.get("ip-attack-map-card-editor")) {
   customElements.define("ip-attack-map-card-editor", IpAttackMapCardEditor);
 }
 
+// Picker type without "custom:" — HA prepends CUSTOM_TYPE_PREFIX ("custom:").
+const CARD_PICKER_TYPE = "ip-attack-map-card";
 window.customCards = window.customCards || [];
-if (!window.customCards.some((c) => c.type === "custom:ip-attack-map-card")) {
+window.customCards = window.customCards.filter(
+  (c) => c.type !== `custom:${CARD_PICKER_TYPE}`,
+);
+if (!window.customCards.some((c) => c.type === CARD_PICKER_TYPE)) {
   window.customCards.push({
-    type: "custom:ip-attack-map-card",
+    type: CARD_PICKER_TYPE,
     name: "IP Attack Map",
-    description: "Statistik und Angriffstabelle für fehlgeschlagene HA-Logins",
+    description: "Statistics and attack table for failed HTTP logins",
     preview: true,
     documentationURL:
-      "https://github.com/chrizzo84/home-assistant-ip-attack-map#lovelace-karte",
+      "https://github.com/chrizzo84/home-assistant-ip-attack-map#dashboard-setup",
   });
 }

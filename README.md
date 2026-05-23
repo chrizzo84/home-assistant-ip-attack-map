@@ -127,6 +127,8 @@ You can change options later via **Configure** on the integration card.
 
 The integration ships a **custom Lovelace card** and registers it automatically. You do **not** need to add a manual resource or copy files into `www/` (unless you use Lovelace entirely in YAML mode — see troubleshooting).
 
+After the Lovelace resource loads, the card appears under **Community cards** in the card picker (German UI: **Community-Karten**). That list is built from `window.customCards` in the card script — it is not the separate HACS **Frontend** plugin catalog.
+
 ### Recommended layout: vertical stack
 
 Use two cards: **IP Attack Map** (stats + table) and the native **Map** card (world map). This avoids Leaflet issues in some browsers when editing stacked cards.
