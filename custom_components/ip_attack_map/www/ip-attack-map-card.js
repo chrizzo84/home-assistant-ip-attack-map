@@ -245,9 +245,13 @@ class IpAttackMapCard extends HTMLElement {
           s.attributes.source === "ip_attack_map",
       )
       .sort((a, b) => {
-        const ta = a.attributes.last_seen || "";
-        const tb = b.attributes.last_seen || "";
-        return tb.localeCompare(ta);
+        const sortKey = (s) => {
+          const attrs = s.attributes;
+          return attrs.banned && attrs.banned_at
+            ? attrs.banned_at
+            : attrs.last_seen || "";
+        };
+        return sortKey(b).localeCompare(sortKey(a));
       });
   }
 
@@ -269,29 +273,28 @@ class IpAttackMapCard extends HTMLElement {
     const banned = a.banned
       ? `<span class="badge badge-banned">Gebannt</span>`
       : `<span class="badge badge-open">Aktiv</span>`;
-    const when = this._formatTime(a.last_seen);
-    const bannedAt =
-      a.banned && a.banned_at
-        ? `<div class="loc-sub">seit ${this._escape(this._formatTime(a.banned_at))}</div>`
-        : "";
+    const timeIso =
+      a.banned && a.banned_at ? a.banned_at : a.last_seen;
+    const when = this._formatTime(timeIso);
 
     return `<tr>
       <td class="ip-cell">${this._escape(ip)}${hostname}</td>
       <td>${loc}${org}</td>
       <td style="text-align:center">${this._escape(attempts)}</td>
-      <td>${banned}${bannedAt}</td>
+      <td>${banned}</td>
       <td class="hide-mobile">${this._escape(when)}</td>
     </tr>`;
   }
 
   _attemptsTodayValue(attacks) {
+    const fromList = this._countAttemptsToday(attacks);
     const sensorAttempts = this._sensorNumber(
       this._findOurSensor("attempts_today"),
     );
     if (sensorAttempts != null) {
-      return sensorAttempts;
+      return Math.max(sensorAttempts, fromList);
     }
-    return this._countAttemptsToday(attacks);
+    return fromList;
   }
 
   _render() {
@@ -357,7 +360,7 @@ class IpAttackMapCard extends HTMLElement {
             <th>Herkunft</th>
             <th>Versuche</th>
             <th>Status</th>
-            <th class="hide-mobile">Zuletzt</th>
+            <th class="hide-mobile">Datum</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>

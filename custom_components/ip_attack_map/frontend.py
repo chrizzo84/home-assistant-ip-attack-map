@@ -13,16 +13,25 @@ from homeassistant.components.lovelace import DOMAIN as LOVELACE_DOMAIN
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.core import CoreState, HomeAssistant, callback
 from homeassistant.helpers.event import async_call_later
+from homeassistant.helpers.storage import Store
 
 from .const import DOMAIN, INTEGRATION_VERSION
 
 _LOGGER = logging.getLogger(__name__)
+
+try:
+    from homeassistant.components.lovelace.const import LOVELACE_DATA, MODE_STORAGE
+except ImportError:  # pragma: no cover - very old HA
+    LOVELACE_DATA = LOVELACE_DOMAIN  # type: ignore[misc, assignment]
+    MODE_STORAGE = "storage"
 
 CARD_STATIC_PATH = "/api/ip_attack_map/card"
 CARD_FILENAME = "ip-attack-map-card.js"
 CARD_API_URL = f"{CARD_STATIC_PATH}/{CARD_FILENAME}"
 LOCAL_REL_PATH = "www/ip_attack_map/ip-attack-map-card.js"
 LOCAL_CARD_URL = "/local/ip_attack_map/ip-attack-map-card.js"
+LOVELACE_RESOURCES_STORAGE_KEY = "lovelace_resources"
+LOVELACE_RESOURCES_STORAGE_VERSION = 1
 
 
 def card_module_url() -> str:
@@ -55,28 +64,113 @@ async def _async_maybe_await(value: Any) -> Any:
 
 def _is_our_card_resource(url: str) -> bool:
     """True if this Lovelace resource belongs to IP Attack Map."""
-    path = _url_path(url)
-    return path in {CARD_API_URL, LOCAL_CARD_URL} or path.endswith(f"/{CARD_FILENAME}")
+    if not url:
+        return False
+    path = _url_path(url).lower()
+    if path in {CARD_API_URL.lower(), LOCAL_CARD_URL.lower()}:
+        return True
+    if path.endswith(CARD_FILENAME.lower()):
+        return True
+    # Legacy / typo URLs users may have added manually.
+    if "ip_attack_map" in path or "ip-attack-map" in path:
+        return "card" in path or path.endswith(".js")
+    return False
 
 
 def _resource_is_current(url: str) -> bool:
-    """True when the stored Lovelace resource matches the preferred local URL."""
+    """True when the stored Lovelace resource matches version and path."""
     return (
         _url_path(url) == LOCAL_CARD_URL
         and _url_version(url) == INTEGRATION_VERSION
     )
 
 
-def _lovelace_storage_mode(hass: HomeAssistant) -> bool:
+def _get_lovelace(hass: HomeAssistant) -> Any | None:
+    """Return LovelaceData (HA 2024+) or legacy dict."""
+    return hass.data.get(LOVELACE_DATA) or hass.data.get(LOVELACE_DOMAIN)
+
+
+def _get_resources(hass: HomeAssistant) -> Any | None:
+    """Return the Lovelace resources collection."""
+    lovelace = _get_lovelace(hass)
+    if lovelace is None:
+        return None
+    if hasattr(lovelace, "resources"):
+        return lovelace.resources
+    if isinstance(lovelace, dict):
+        return lovelace.get("resources")
+    return None
+
+
+def _lovelace_resource_storage_mode(hass: HomeAssistant) -> bool:
     """Return True when Lovelace resources are managed in storage (default)."""
-    lovelace_data = hass.data.get(LOVELACE_DOMAIN)
-    if lovelace_data is None:
+    lovelace = _get_lovelace(hass)
+    if lovelace is None:
         return False
-    if isinstance(lovelace_data, dict):
-        mode = lovelace_data.get("mode", "storage")
-    else:
-        mode = getattr(lovelace_data, "mode", "storage")
-    return mode == "storage"
+    if hasattr(lovelace, "resource_mode"):
+        return lovelace.resource_mode == MODE_STORAGE
+    if isinstance(lovelace, dict):
+        mode = lovelace.get("resource_mode", lovelace.get("mode", MODE_STORAGE))
+        return mode == MODE_STORAGE
+    return True
+
+
+async def _async_ensure_resources_loaded(resources: Any) -> None:
+    """Load Lovelace resources from disk before list/create (avoids empty collection)."""
+    if hasattr(resources, "async_get_info"):
+        await resources.async_get_info()
+        return
+    if hasattr(resources, "_async_ensure_loaded"):
+        await resources._async_ensure_loaded()
+        return
+    if hasattr(resources, "async_load") and not getattr(resources, "loaded", True):
+        await resources.async_load()
+        resources.loaded = True
+
+
+async def _async_list_resources(resources: Any) -> list[dict[str, Any]]:
+    """Return all Lovelace resource items."""
+    await _async_ensure_resources_loaded(resources)
+    items = resources.async_items()
+    result = await _async_maybe_await(items)
+    return list(result or [])
+
+
+async def _async_patch_lovelace_resources_storage(
+    hass: HomeAssistant, module_url: str
+) -> bool:
+    """Last resort: patch .storage/lovelace_resources when collection API fails."""
+    store = Store(
+        hass,
+        LOVELACE_RESOURCES_STORAGE_VERSION,
+        LOVELACE_RESOURCES_STORAGE_KEY,
+    )
+    data = await store.async_load()
+    if not data or not isinstance(data.get("items"), list):
+        return False
+
+    changed = False
+    for item in data["items"]:
+        url = item.get("url", "")
+        if not _is_our_card_resource(url):
+            continue
+        if item.get("url") != module_url or item.get("type") != "module":
+            item["url"] = module_url
+            item["type"] = "module"
+            changed = True
+
+    if not changed:
+        return False
+
+    await store.async_save(data)
+    resources = _get_resources(hass)
+    if resources is not None and hasattr(resources, "async_load"):
+        await resources.async_load()
+        resources.loaded = True
+    _LOGGER.info(
+        "Patched IP Attack Map Lovelace resource in storage to %s", module_url
+    )
+    return True
 
 
 async def async_register_static_path(hass: HomeAssistant) -> None:
@@ -128,73 +222,87 @@ async def async_ensure_card_assets(hass: HomeAssistant) -> str:
 
 async def async_register_lovelace_resource(hass: HomeAssistant) -> bool:
     """Create or update the Lovelace module resource for the card."""
-    if not _lovelace_storage_mode(hass):
-        _LOGGER.debug("Lovelace YAML mode: skipping automatic resource registration")
+    if not _lovelace_resource_storage_mode(hass):
+        _LOGGER.info(
+            "Lovelace resources use YAML mode; add this module resource manually: %s",
+            card_module_url(),
+        )
         return False
 
-    lovelace_data = hass.data.get(LOVELACE_DOMAIN)
-    if not lovelace_data:
-        return False
-
-    resources = (
-        lovelace_data.get("resources")
-        if isinstance(lovelace_data, dict)
-        else getattr(lovelace_data, "resources", None)
-    )
+    resources = _get_resources(hass)
     if resources is None:
-        return False
-
-    if getattr(resources, "loaded", True) is False:
+        _LOGGER.warning(
+            "Lovelace not ready; IP Attack Map card resource not registered yet"
+        )
         return False
 
     if not callable(getattr(resources, "async_create_item", None)):
-        _LOGGER.debug("Lovelace resources are not storage-managed; skipping auto-register")
+        _LOGGER.debug(
+            "Lovelace resources are not storage-managed; skipping auto-register"
+        )
         return False
 
     module_url = hass.data.get(DOMAIN, {}).get("card_module_url", card_module_url())
 
     try:
-        existing = await _async_maybe_await(resources.async_items())
+        existing = await _async_list_resources(resources)
     except Exception:
         _LOGGER.exception("Could not read Lovelace resources for IP Attack Map card")
-        return False
+        return await _async_patch_lovelace_resources_storage(hass, module_url)
 
-    for item in existing:
-        url = item.get("url", "")
-        if not _is_our_card_resource(url):
-            continue
+    our_items = [
+        item for item in existing if _is_our_card_resource(item.get("url", ""))
+    ]
 
-        if _resource_is_current(url):
-            _LOGGER.debug("IP Attack Map Lovelace resource already current: %s", url)
+    if our_items:
+        current_items = [
+            item for item in our_items if _resource_is_current(item.get("url", ""))
+        ]
+        if current_items:
+            keeper_id = current_items[0]["id"]
+            for item in our_items:
+                if item["id"] != keeper_id:
+                    await resources.async_delete_item(item["id"])
+                    _LOGGER.info(
+                        "Removed duplicate IP Attack Map resource: %s",
+                        item.get("url"),
+                    )
+            _LOGGER.info(
+                "IP Attack Map Lovelace resource is current: %s",
+                current_items[0].get("url"),
+            )
             return True
 
-        if not callable(getattr(resources, "async_update_item", None)):
-            break
-
         try:
-            await _async_maybe_await(
-                resources.async_update_item(
-                    item["id"],
-                    {"res_type": "module", "url": module_url},
-                )
+            await resources.async_update_item(
+                our_items[0]["id"],
+                {"res_type": "module", "url": module_url},
             )
             _LOGGER.info(
-                "Updated IP Attack Map Lovelace resource to %s", module_url
+                "Updated IP Attack Map Lovelace resource: %s -> %s",
+                our_items[0].get("url"),
+                module_url,
             )
+            for item in our_items[1:]:
+                await resources.async_delete_item(item["id"])
+                _LOGGER.info(
+                    "Removed duplicate IP Attack Map resource: %s",
+                    item.get("url"),
+                )
             return True
         except Exception:
             _LOGGER.exception("Failed to update IP Attack Map Lovelace resource")
-            return False
+            return await _async_patch_lovelace_resources_storage(hass, module_url)
 
     try:
-        await _async_maybe_await(
-            resources.async_create_item({"res_type": "module", "url": module_url})
+        await resources.async_create_item(
+            {"res_type": "module", "url": module_url}
         )
         _LOGGER.info("Registered IP Attack Map Lovelace resource: %s", module_url)
         return True
     except Exception:
         _LOGGER.exception("Failed to register IP Attack Map Lovelace resource")
-        return False
+        return await _async_patch_lovelace_resources_storage(hass, module_url)
 
 
 async def _async_wait_for_lovelace_resources(hass: HomeAssistant) -> None:
@@ -222,8 +330,7 @@ def async_listen_for_card_frontend(hass: HomeAssistant) -> None:
 
     async def _register_lovelace(_event: Any = None) -> None:
         await async_publish_card_to_www(hass)
-        if _lovelace_storage_mode(hass):
-            await _async_wait_for_lovelace_resources(hass)
+        await async_register_lovelace_resource(hass)
 
     @callback
     def _on_started(_event: Any) -> None:
@@ -238,5 +345,7 @@ def async_listen_for_card_frontend(hass: HomeAssistant) -> None:
     def _retry(_now: Any) -> None:
         hass.async_create_task(_register_lovelace())
 
-    for delay in (15, 60, 180):
+    for delay in (5, 15, 60, 180, 600):
         async_call_later(hass, delay, _retry)
+
+    hass.async_create_task(_async_wait_for_lovelace_resources(hass))

@@ -135,3 +135,7 @@ async def async_import_ip_bans(
         except vol.Invalid:
             pass
         await coordinator.async_import_ban(ip_str, banned_at=banned_at)
+
+    coordinator.sync_ban_timestamps_from_ip_bans()
+    coordinator.async_set_updated_data(coordinator.attacks)
+    coordinator.async_update_listeners()

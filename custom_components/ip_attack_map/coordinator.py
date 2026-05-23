@@ -189,6 +189,7 @@ class IpAttackMapCoordinator(DataUpdateCoordinator[dict[str, AttackRecord]]):
                     org=record.org,
                 )
         self._geo_provider = self._create_geo_provider()
+        self.sync_ban_timestamps_from_ip_bans()
 
     async def async_shutdown(self) -> None:
         """Release GeoIP provider resources."""
@@ -214,6 +215,9 @@ class IpAttackMapCoordinator(DataUpdateCoordinator[dict[str, AttackRecord]]):
         cutoff = dt_util.utcnow() - timedelta(days=self.retention_days)
         removed: list[str] = []
         for ip, record in list(self.attacks.items()):
+            # Bans from ip_bans.yaml stay until HA removes the ban.
+            if record.banned:
+                continue
             if record.last_seen < cutoff:
                 removed.append(ip)
                 del self.attacks[ip]
@@ -343,18 +347,25 @@ class IpAttackMapCoordinator(DataUpdateCoordinator[dict[str, AttackRecord]]):
         ):
             return
 
+        when = banned_at or dt_util.utcnow()
         is_new = ip not in self.attacks
         if is_new:
             self.attacks[ip] = AttackRecord(
                 ip=ip,
                 banned=True,
-                banned_at=banned_at or dt_util.utcnow(),
+                banned_at=when,
+                last_seen=when,
                 attempt_count=0,
             )
         else:
             record = self.attacks[ip]
             record.banned = True
-            record.banned_at = banned_at or record.banned_at or dt_util.utcnow()
+            if banned_at is not None:
+                record.banned_at = banned_at
+            elif record.banned_at is None:
+                record.banned_at = dt_util.utcnow()
+            if record.attempt_count == 0 and record.banned_at is not None:
+                record.last_seen = record.banned_at
 
         show_on_map = should_show_on_map(
             ip,
@@ -379,6 +390,12 @@ class IpAttackMapCoordinator(DataUpdateCoordinator[dict[str, AttackRecord]]):
         self.async_set_updated_data(self.attacks)
         self.async_update_listeners()
         await self._persist_cache()
+
+    def sync_ban_timestamps_from_ip_bans(self) -> None:
+        """Use banned_at from ip_bans.yaml for display (not a fresh last_seen)."""
+        for record in self.attacks.values():
+            if record.banned and record.banned_at and record.attempt_count == 0:
+                record.last_seen = record.banned_at
 
     @callback
     def get_record(self, ip: str) -> AttackRecord | None:

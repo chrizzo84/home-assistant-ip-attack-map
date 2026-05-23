@@ -98,8 +98,7 @@ Die Custom Card zeigt eine **Tabelle**: IP/Host, Herkunft (Stadt/Land/ISP), Vers
 2. Einmal **hart neu laden** (Cmd+Shift+R), Dashboard neu öffnen
 3. Im Log sollten erscheinen: `Published IP Attack Map card for Lovelace` und `Registered IP Attack Map Lovelace resource` (URL `/local/ip_attack_map/...`)
 4. Unter **Einstellungen → Dashboards → Ressourcen** darf höchstens **ein** Eintrag stehen:  
-   `/local/ip_attack_map/ip-attack-map-card.js` (mit **`?v=…`**, Typ **JavaScript-Modul**).  
-   Wichtig: **`ip-attack-map-card`** (Bindestriche), nicht `ip_attack_map-card`. Alte `/api/...`-Einträge löschen.
+   `/local/ip_attack_map/ip-attack-map-card.js?v=…` (Typ **JavaScript-Modul**). Ab **0.3.0** wird die URL beim Start automatisch auf die aktuelle Version gesetzt (auch wenn früher ein Tippfehler wie `ip_attack_map-card.js` eingetragen war). Alte `/api/...`-Einträge werden entfernt.
 5. **Rote Vorschau nur im Karten-Editor?** Speichern, Dashboard normal öffnen (nicht Bearbeiten) — die Editor-Vorschau lädt Ressourcen manchmal zu spät.
 
 Nur bei **Lovelace komplett in YAML** (selten): Ressource einmalig in `ui-lovelace.yaml` eintragen — URL wie oben, Typ `module`.

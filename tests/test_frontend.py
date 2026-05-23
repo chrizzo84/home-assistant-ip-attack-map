@@ -2,6 +2,7 @@
 
 import pytest
 
+from custom_components.ip_attack_map.const import INTEGRATION_VERSION
 from custom_components.ip_attack_map.frontend import (
     CARD_API_URL,
     LOCAL_CARD_URL,
@@ -30,7 +31,7 @@ async def test_async_maybe_await_coroutine() -> None:
 def test_card_module_url_includes_version() -> None:
     url = card_module_url()
     assert url.startswith(LOCAL_CARD_URL)
-    assert "v=0.2.5" in url
+    assert f"v={INTEGRATION_VERSION}" in url
 
 
 def test_url_path_strips_query() -> None:
@@ -45,9 +46,11 @@ def test_url_version() -> None:
 def test_is_our_card_resource() -> None:
     assert _is_our_card_resource(CARD_API_URL)
     assert _is_our_card_resource(f"{LOCAL_CARD_URL}?v=1")
+    # Common manual typo (underscore instead of hyphen in filename).
+    assert _is_our_card_resource("/local/ip_attack_map/ip_attack_map-card.js?v=0.2.5")
     assert _is_our_card_resource("/other/card.js") is False
 
 
 def test_resource_is_current() -> None:
-    assert _resource_is_current(f"{LOCAL_CARD_URL}?v=0.2.5") is True
-    assert _resource_is_current(f"{CARD_API_URL}?v=0.2.5") is False
+    assert _resource_is_current(f"{LOCAL_CARD_URL}?v={INTEGRATION_VERSION}") is True
+    assert _resource_is_current(f"{CARD_API_URL}?v={INTEGRATION_VERSION}") is False
