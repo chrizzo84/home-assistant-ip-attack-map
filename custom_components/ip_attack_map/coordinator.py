@@ -9,7 +9,9 @@ from typing import Any, Callable
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.storage import Store
+from homeassistant.requirements import async_process_requirements
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
@@ -159,6 +161,16 @@ class IpAttackMapCoordinator(DataUpdateCoordinator[dict[str, AttackRecord]]):
 
     async def async_setup(self) -> None:
         """Load cache and initialize GeoIP provider."""
+        if self.entry.data.get(CONF_GEO_PROVIDER) == GEO_PROVIDER_MAXMIND:
+            try:
+                await async_process_requirements(
+                    self.hass, DOMAIN, ["geoip2>=4.8.0"]
+                )
+            except Exception as err:
+                raise ConfigEntryNotReady(
+                    "Failed to install geoip2 for MaxMind lookups"
+                ) from err
+
         cached = await self._store.async_load()
         if cached and isinstance(cached.get("attacks"), dict):
             for ip, data in cached["attacks"].items():

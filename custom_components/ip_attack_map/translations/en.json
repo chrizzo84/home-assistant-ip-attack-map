@@ -34,6 +34,9 @@
     },
     "abort": {
       "single_instance_allowed": "Only one IP Attack Map instance is allowed."
+    },
+    "error": {
+      "unknown": "An unexpected error occurred. Check the Home Assistant logs for details."
     }
   },
   "options": {

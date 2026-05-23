@@ -34,6 +34,9 @@
     },
     "abort": {
       "single_instance_allowed": "Es ist nur eine IP-Attack-Map-Instanz erlaubt."
+    },
+    "error": {
+      "unknown": "Ein unerwarteter Fehler ist aufgetreten. Details stehen in den Home-Assistant-Logs."
     }
   },
   "options": {
