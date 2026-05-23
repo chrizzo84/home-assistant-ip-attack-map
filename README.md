@@ -62,7 +62,7 @@ Ab Version **1.1.0** gibt es eine **Custom Card** für Statistik und Angriffslis
 Die Karte erscheint nur, wenn die JavaScript-Datei geladen ist:
 
 1. **Einstellungen → Dashboards → Ressourcen → Ressource hinzufügen**
-2. URL: `/api/ip_attack_map/card/ip-attack-map-card.js`
+2. URL: `/local/ip_attack_map/ip-attack-map-card.js` (wird bei Setup automatisch nach `/config/www/` kopiert)
 3. Typ: **JavaScript-Modul**
 4. Speichern, dann **Browser hart neu laden** (Cmd+Shift+R)
 
@@ -92,12 +92,22 @@ cards:
     default_zoom: 2
 ```
 
+### „Custom element doesn't exist: ip-attack-map-card“
+
+Die JavaScript-Datei ist **nicht geladen**. Ressource prüfen:
+
+1. **Einstellungen → Dashboards → Ressourcen** → muss enthalten:  
+   `/local/ip_attack_map/ip-attack-map-card.js` (Typ: **JavaScript-Modul**)
+2. Alte Einträge mit `/api/ip_attack_map/...` **entfernen** und nur `/local/...` verwenden
+3. Integration **1.1.2+** installieren → startet HA neu → kopiert die Datei nach `config/www/ip_attack_map/`
+4. **Cmd+Shift+R** in Safari, Dashboard neu laden
+
 ### Karte erscheint nicht unter „Karte hinzufügen“?
 
 - Ressource fehlt oder falsche URL → Schritt oben
 - Browser-Cache → Cmd+Shift+R
-- Nach HA-Neustart 30 s warten (Ressource wird nachgereicht)
-- Im Log: `Registered Lovelace resource for IP Attack Map card`
+- Nach HA-Neustart 60 s warten (Ressource wird nachgereicht)
+- Im Log: `Published IP Attack Map card to` und `Registered Lovelace resource`
 
 ### Entitäten auf der Karte
 
