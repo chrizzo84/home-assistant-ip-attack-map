@@ -4,7 +4,7 @@ from __future__ import annotations
 
 DOMAIN = "ip_attack_map"
 SOURCE = "ip_attack_map"
-INTEGRATION_VERSION = "1.1.2"
+INTEGRATION_VERSION = "1.1.3"
 
 CONF_GEO_PROVIDER = "geo_provider"
 CONF_MAXMIND_DB_PATH = "maxmind_db_path"

@@ -84,6 +84,8 @@ type: vertical-stack
 cards:
   - type: custom:ip-attack-map-card
     title: Login-Angriffe
+    show_list: true
+    max_list_items: 50
   - type: map
     geo_location_sources:
       - ip_attack_map
@@ -91,6 +93,8 @@ cards:
       - zone.home
     default_zoom: 2
 ```
+
+Die Custom Card zeigt eine **Tabelle**: IP/Host, Herkunft (Stadt/Land/ISP), Versuche, **Gebannt** oder **Aktiv**, Zeitpunkt.
 
 ### „Custom element doesn't exist: ip-attack-map-card“
 

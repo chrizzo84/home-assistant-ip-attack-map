@@ -1,8 +1,12 @@
-# Recommended dashboard layout: stats card + native map (no Leaflet nesting issues)
+# Karte oben: Tabelle mit IP, Herkunft, Versuchen, Ban-Status
+# Karte unten: Weltkarte (geo_location_sources)
 type: vertical-stack
 cards:
   - type: custom:ip-attack-map-card
     title: Login-Angriffe
+    show_list: true
+    show_map_hint: false
+    max_list_items: 50
   - type: map
     title: Angriffe auf der Karte
     geo_location_sources:
