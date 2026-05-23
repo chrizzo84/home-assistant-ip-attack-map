@@ -67,24 +67,6 @@ def _resource_is_current(url: str) -> bool:
     )
 
 
-def _register_extra_js(hass: HomeAssistant, url: str) -> None:
-    """Load the card module on HA frontend startup (supplement to Lovelace resources)."""
-    try:
-        from homeassistant.components import frontend
-
-        add_extra = getattr(frontend, "add_extra_js_url", None)
-        if not callable(add_extra):
-            _LOGGER.warning(
-                "Home Assistant frontend does not support add_extra_js_url; "
-                "Lovelace resource registration is required"
-            )
-            return
-        add_extra(hass, url)
-        _LOGGER.info("IP Attack Map card registered as frontend module: %s", url)
-    except Exception:
-        _LOGGER.exception("Failed to register IP Attack Map card as frontend module")
-
-
 def _lovelace_storage_mode(hass: HomeAssistant) -> bool:
     """Return True when Lovelace resources are managed in storage (default)."""
     lovelace_data = hass.data.get(LOVELACE_DOMAIN)
@@ -134,13 +116,13 @@ async def async_publish_card_to_www(hass: HomeAssistant) -> None:
 
 
 async def async_ensure_card_assets(hass: HomeAssistant) -> str:
-    """Register HTTP path, publish /local copy, and register extra JS (call from async_setup)."""
+    """Register HTTP path, publish /local copy, and Lovelace resource (call from async_setup)."""
     await async_register_static_path(hass)
     await async_publish_card_to_www(hass)
 
     module_url = card_module_url()
     hass.data.setdefault(DOMAIN, {})["card_module_url"] = module_url
-    _register_extra_js(hass, module_url)
+    await async_register_lovelace_resource(hass)
     return module_url
 
 

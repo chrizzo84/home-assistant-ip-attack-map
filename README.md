@@ -97,7 +97,10 @@ Die Custom Card zeigt eine **Tabelle**: IP/Host, Herkunft (Stadt/Land/ISP), Vers
 1. Integration auf **0.2.3+** aktualisieren (HACS) und **Home Assistant neu starten**
 2. Einmal **hart neu laden** (Cmd+Shift+R), Dashboard neu öffnen
 3. Im Log sollten erscheinen: `Published IP Attack Map card for Lovelace` und `Registered IP Attack Map Lovelace resource` (URL `/local/ip_attack_map/...`)
-4. Unter **Einstellungen → Dashboards → Ressourcen** darf höchstens **ein** Eintrag für die Karte stehen (`/local/ip_attack_map/ip-attack-map-card.js`, Typ Modul). Alte `/api/ip_attack_map/...`-Einträge löschen.
+4. Unter **Einstellungen → Dashboards → Ressourcen** darf höchstens **ein** Eintrag stehen:  
+   `/local/ip_attack_map/ip-attack-map-card.js` (mit **`?v=…`**, Typ **JavaScript-Modul**).  
+   Wichtig: **`ip-attack-map-card`** (Bindestriche), nicht `ip_attack_map-card`. Alte `/api/...`-Einträge löschen.
+5. **Rote Vorschau nur im Karten-Editor?** Speichern, Dashboard normal öffnen (nicht Bearbeiten) — die Editor-Vorschau lädt Ressourcen manchmal zu spät.
 
 Nur bei **Lovelace komplett in YAML** (selten): Ressource einmalig in `ui-lovelace.yaml` eintragen — URL wie oben, Typ `module`.
 

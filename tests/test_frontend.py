@@ -30,7 +30,7 @@ async def test_async_maybe_await_coroutine() -> None:
 def test_card_module_url_includes_version() -> None:
     url = card_module_url()
     assert url.startswith(LOCAL_CARD_URL)
-    assert "v=0.2.3" in url
+    assert "v=0.2.5" in url
 
 
 def test_url_path_strips_query() -> None:
@@ -49,5 +49,5 @@ def test_is_our_card_resource() -> None:
 
 
 def test_resource_is_current() -> None:
-    assert _resource_is_current(f"{LOCAL_CARD_URL}?v=0.2.3") is True
-    assert _resource_is_current(f"{CARD_API_URL}?v=0.2.3") is False
+    assert _resource_is_current(f"{LOCAL_CARD_URL}?v=0.2.5") is True
+    assert _resource_is_current(f"{CARD_API_URL}?v=0.2.5") is False

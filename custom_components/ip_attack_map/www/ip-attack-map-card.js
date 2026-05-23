@@ -363,15 +363,21 @@ class IpAttackMapCardEditor extends HTMLElement {
   }
 }
 
-customElements.define("ip-attack-map-card", IpAttackMapCard);
-customElements.define("ip-attack-map-card-editor", IpAttackMapCardEditor);
+if (!customElements.get("ip-attack-map-card")) {
+  customElements.define("ip-attack-map-card", IpAttackMapCard);
+}
+if (!customElements.get("ip-attack-map-card-editor")) {
+  customElements.define("ip-attack-map-card-editor", IpAttackMapCardEditor);
+}
 
 window.customCards = window.customCards || [];
-window.customCards.push({
-  type: "custom:ip-attack-map-card",
-  name: "IP Attack Map",
-  description: "Statistik und Angriffstabelle für fehlgeschlagene HA-Logins",
-  preview: true,
-  documentationURL:
-    "https://github.com/chrizzo84/home-assistant-ip-attack-map#lovelace-karte",
-});
+if (!window.customCards.some((c) => c.type === "custom:ip-attack-map-card")) {
+  window.customCards.push({
+    type: "custom:ip-attack-map-card",
+    name: "IP Attack Map",
+    description: "Statistik und Angriffstabelle für fehlgeschlagene HA-Logins",
+    preview: true,
+    documentationURL:
+      "https://github.com/chrizzo84/home-assistant-ip-attack-map#lovelace-karte",
+  });
+}
