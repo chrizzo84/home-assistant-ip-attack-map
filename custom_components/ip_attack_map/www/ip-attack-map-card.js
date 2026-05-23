@@ -213,20 +213,27 @@ class IpAttackMapCard extends HTMLElement {
     return Number.isFinite(value) ? value : null;
   }
 
-  _statsFromAttacks(attacks) {
-    let bans = 0;
+  _countAttemptsToday(attacks) {
+    /** Failed logins today — not "last_seen" (old bans get refreshed without new attempts). */
     let attemptsToday = 0;
     for (const a of attacks) {
+      if (!this._isToday(a.attributes.last_seen)) continue;
+      const count = Number(a.attributes.attempt_count) || 0;
+      if (count <= 0) continue;
+      attemptsToday += count;
+    }
+    return attemptsToday;
+  }
+
+  _statsFromAttacks(attacks) {
+    let bans = 0;
+    for (const a of attacks) {
       if (a.attributes.banned) bans += 1;
-      if (this._isToday(a.attributes.last_seen)) {
-        const count = Number(a.attributes.attempt_count);
-        attemptsToday += count > 0 ? count : 1;
-      }
     }
     return {
       tracked: attacks.length,
       bans,
-      attemptsToday,
+      attemptsToday: this._countAttemptsToday(attacks),
     };
   }
 
@@ -277,6 +284,16 @@ class IpAttackMapCard extends HTMLElement {
     </tr>`;
   }
 
+  _attemptsTodayValue(attacks) {
+    const sensorAttempts = this._sensorNumber(
+      this._findOurSensor("attempts_today"),
+    );
+    if (sensorAttempts != null) {
+      return sensorAttempts;
+    }
+    return this._countAttemptsToday(attacks);
+  }
+
   _render() {
     if (!this._config || !this._hass) return;
 
@@ -288,20 +305,14 @@ class IpAttackMapCard extends HTMLElement {
     const computed = this._statsFromAttacks(attacks);
     const maxItems = this._config.max_list_items ?? 30;
 
-    const sensorAttempts = this._sensorNumber(
-      this._findOurSensor("attempts_today"),
-    );
-    const attemptsVal =
-      sensorAttempts != null
-        ? Math.max(sensorAttempts, computed.attemptsToday)
-        : computed.attemptsToday;
+    const attemptsVal = this._attemptsTodayValue(attacks);
     const bansVal =
       this._sensorNumber(this._findOurSensor("active_bans")) ?? computed.bans;
     const trackedVal =
       this._sensorNumber(this._findOurSensor("tracked_ips")) ?? computed.tracked;
 
     card.querySelector(".stats").innerHTML = `
-      <div class="stat"><div class="stat-label">Heute</div><div class="stat-value">${this._escape(attemptsVal)}</div></div>
+      <div class="stat" title="Fehlgeschlagene Logins heute (Sensor)"><div class="stat-label">Heute</div><div class="stat-value">${this._escape(attemptsVal)}</div></div>
       <div class="stat"><div class="stat-label">Bans</div><div class="stat-value">${this._escape(bansVal)}</div></div>
       <div class="stat"><div class="stat-label">IPs</div><div class="stat-value">${this._escape(trackedVal)}</div></div>
       <div class="stat"><div class="stat-label">Auf Karte</div><div class="stat-value">${attacks.length}</div></div>
