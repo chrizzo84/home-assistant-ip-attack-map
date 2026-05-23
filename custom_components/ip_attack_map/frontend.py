@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import logging
 from pathlib import Path
 from typing import Any
@@ -40,6 +41,13 @@ def _url_version(url: str) -> str | None:
         if part.startswith("v="):
             return part[2:]
     return None
+
+
+async def _async_maybe_await(value: Any) -> Any:
+    """Await coroutines; return plain values unchanged (HA version differences)."""
+    if inspect.isawaitable(value):
+        return await value
+    return value
 
 
 def _is_our_card_resource(url: str) -> bool:
@@ -159,7 +167,7 @@ async def _async_register_lovelace_resource(hass: HomeAssistant, resources: Any)
     module_url = hass.data.get(DOMAIN, {}).get("card_module_url", card_module_url())
 
     try:
-        existing = await resources.async_items()
+        existing = await _async_maybe_await(resources.async_items())
     except Exception:
         _LOGGER.exception("Could not read Lovelace resources for IP Attack Map card")
         return
@@ -177,9 +185,11 @@ async def _async_register_lovelace_resource(hass: HomeAssistant, resources: Any)
             break
 
         try:
-            await resources.async_update_item(
-                item["id"],
-                {"res_type": "module", "url": module_url},
+            await _async_maybe_await(
+                resources.async_update_item(
+                    item["id"],
+                    {"res_type": "module", "url": module_url},
+                )
             )
             _LOGGER.info(
                 "Updated IP Attack Map Lovelace resource to version %s",
@@ -191,7 +201,9 @@ async def _async_register_lovelace_resource(hass: HomeAssistant, resources: Any)
             return
 
     try:
-        await resources.async_create_item({"res_type": "module", "url": module_url})
+        await _async_maybe_await(
+            resources.async_create_item({"res_type": "module", "url": module_url})
+        )
         _LOGGER.info(
             "Registered IP Attack Map Lovelace resource (%s)", module_url
         )

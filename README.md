@@ -101,6 +101,10 @@ Die Custom Card zeigt eine **Tabelle**: IP/Host, Herkunft (Stadt/Land/ISP), Vers
 
 Nur bei **Lovelace komplett in YAML** (selten): Ressource einmalig in `ui-lovelace.yaml` eintragen — URL wie oben, Typ `module`.
 
+### Safari: `_leaflet_pos` in der Karten-Vorschau
+
+Das betrifft die **normale HA-Karte** (Leaflet), oft in der **Bearbeitungsvorschau** eines Stapels — nicht die Custom Card. Nach **Speichern** und **Cmd+Shift+R** sollte die Karte im Dashboard laufen; im Editor kann Safari 26.x weiter zicken. Trenne die Karten testweise (nur Tabelle, nur Karte) oder nutze Chrome/Firefox zum Bearbeiten.
+
 ### Entitäten auf der Karte
 
 `geo_location`-Marker pro Angreifer-IP sind **standardmäßig ausgeblendet** (nur für die Karte da, nicht in der Entitätenliste). Sichtbar bleiben die **Sensoren** (Attempts today, Active bans, …). Bereits angelegte Marker nach dem Update ggf. einmal unter Entitäten → Ausgeblendet prüfen oder Integration neu laden.

@@ -1,7 +1,10 @@
 """Tests for Lovelace card URL helpers."""
 
+import pytest
+
 from custom_components.ip_attack_map.frontend import (
     CARD_API_URL,
+    _async_maybe_await,
     _is_our_card_resource,
     _url_path,
     _url_version,
@@ -9,10 +12,23 @@ from custom_components.ip_attack_map.frontend import (
 )
 
 
+@pytest.mark.asyncio
+async def test_async_maybe_await_plain_value() -> None:
+    assert await _async_maybe_await([{"id": "1"}]) == [{"id": "1"}]
+
+
+@pytest.mark.asyncio
+async def test_async_maybe_await_coroutine() -> None:
+    async def _coro() -> str:
+        return "ok"
+
+    assert await _async_maybe_await(_coro()) == "ok"
+
+
 def test_card_module_url_includes_version() -> None:
     url = card_module_url()
     assert url.startswith(CARD_API_URL)
-    assert "v=0.2.1" in url
+    assert "v=0.2.2" in url
 
 
 def test_url_path_strips_query() -> None:
