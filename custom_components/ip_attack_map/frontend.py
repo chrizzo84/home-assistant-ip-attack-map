@@ -38,13 +38,13 @@ LOVELACE_RESOURCES_STORAGE_VERSION = 1
 
 
 def card_module_url() -> str:
-    """Versioned Lovelace module URL (served by integration — always matches installed code)."""
-    return card_extra_module_url()
+    """Versioned Lovelace module URL (/local — same pattern as HACS frontend cards)."""
+    return f"{LOCAL_CARD_URL}?v={INTEGRATION_VERSION}"
 
 
 def card_extra_module_url() -> str:
-    """Versioned module URL served by the integration (always in sync with release)."""
-    return f"{CARD_API_URL}?v={INTEGRATION_VERSION}"
+    """Same URL as the Lovelace resource (required for extra_js + dashboard resources)."""
+    return card_module_url()
 
 
 def _url_path(url: str) -> str:
@@ -86,9 +86,9 @@ def _is_our_card_resource(url: str) -> bool:
 
 
 def _resource_is_current(url: str) -> bool:
-    """True when the stored Lovelace resource matches version and preferred API path."""
+    """True when the stored Lovelace resource matches version and /local path."""
     return (
-        _url_path(url) == CARD_API_URL
+        _url_path(url) == LOCAL_CARD_URL
         and _url_version(url) == INTEGRATION_VERSION
     )
 
@@ -283,6 +283,7 @@ async def async_ensure_card_assets(
 
     module_url = card_module_url()
     hass.data.setdefault(DOMAIN, {})["card_module_url"] = module_url
+    # extra_js and Lovelace resource must use the same /local URL (card-mod pattern).
     async_register_extra_module(hass)
     await async_register_lovelace_resource(hass, quiet=quiet)
     return module_url

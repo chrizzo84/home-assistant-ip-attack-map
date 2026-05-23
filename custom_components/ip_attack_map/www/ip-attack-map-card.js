@@ -435,3 +435,8 @@ if (!window.customCards.some((c) => c.type === CARD_PICKER_TYPE)) {
       "https://github.com/chrizzo84/home-assistant-ip-attack-map#dashboard-setup",
   });
 }
+
+console.info(
+  "[IP Attack Map] card loaded; picker entry:",
+  window.customCards.filter((c) => c.type === CARD_PICKER_TYPE),
+);

@@ -129,11 +129,11 @@ The integration ships a **custom Lovelace card** and registers it automatically.
 
 After the integration loads its frontend module, the card appears under **Community cards** in the card picker (German UI: **Community-Karten**). That list is built from `window.customCards` when the card JavaScript runs — it is not the separate HACS **Frontend** plugin catalog.
 
-From **0.3.3**, the card is registered in two ways:
+From **0.3.4**, the card is registered in two ways (both use the **same** `/local/…` URL, like HACS frontend cards):
 
-1. **`frontend.add_extra_js_url`** — loads with the main Home Assistant UI (required for **Community cards** in the picker). After restart, the log must show:  
-   `Registered IP Attack Map frontend module (extra_js): /api/ip_attack_map/card/ip-attack-map-card.js?v=…`
-2. **Lovelace resources** — same `/api/…` URL (always matches the installed integration; `/local/…` is still published as a fallback).
+1. **`frontend.add_extra_js_url`** — loads with the main Home Assistant UI (required for **Community cards** in the picker). Log line:  
+   `Registered IP Attack Map frontend module (extra_js): /local/ip_attack_map/ip-attack-map-card.js?v=…`
+2. **Lovelace resources** — identical URL (required so the script is not loaded twice with different paths).
 
 ### Recommended layout: vertical stack
 
@@ -235,14 +235,16 @@ On startup, existing entries in **`/config/ip_bans.yaml`** are imported. The **`
 
 ### Card missing from Community cards / custom element doesn’t exist
 
-1. Install **0.3.3+** via HACS and **restart Home Assistant** (full restart).  
+1. Install **0.3.4+** via HACS and **restart Home Assistant** (full restart).  
 2. Hard-refresh the browser (e.g. Cmd+Shift+R), then open **Add card** → **Community cards** and search for **IP Attack Map**.  
-3. Check logs for (all important):  
-   - `IP Attack Map integration loading (version 0.3.3)`  
-   - **`Registered IP Attack Map frontend module (extra_js): …`** — if this line is missing, the card will **not** appear under Community cards  
-   - `Aligned IP Attack Map Lovelace resource to integration 0.3.3` (migrates old `/local/…` URLs to `/api/…`)  
+3. Check logs for:  
+   - `IP Attack Map integration loading (version 0.3.4)`  
+   - **`Registered IP Attack Map frontend module (extra_js): /local/ip_attack_map/…`** — must be `/local/`, not `/api/`  
+   - `extra_js` and Lovelace resource URLs must match  
 4. **Settings** → **Dashboards** → **Resources** — one entry:  
-   `/api/ip_attack_map/card/ip-attack-map-card.js?v=0.3.3` (type **JavaScript module**).  
+   `/local/ip_attack_map/ip-attack-map-card.js?v=0.3.4` (type **JavaScript module**).  
+5. Browser console (F12): after reload you should see  
+   `[IP Attack Map] card loaded; picker entry: …`  
 5. Red preview **only in the card editor?** Save the dashboard and open it in normal view — the editor sometimes loads resources late.
 
 ### Lovelace resources in YAML mode

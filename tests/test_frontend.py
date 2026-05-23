@@ -56,7 +56,16 @@ def test_resource_is_current() -> None:
     assert _resource_is_current(f"{LOCAL_CARD_URL}?v={INTEGRATION_VERSION}") is False
 
 
-def test_card_module_url_uses_api_path() -> None:
+def test_card_module_url_uses_local_path() -> None:
     from custom_components.ip_attack_map.frontend import card_module_url
 
-    assert card_module_url().startswith(CARD_API_URL)
+    assert card_module_url().startswith(LOCAL_CARD_URL)
+
+
+def test_extra_module_url_matches_lovelace_resource() -> None:
+    from custom_components.ip_attack_map.frontend import (
+        card_extra_module_url,
+        card_module_url,
+    )
+
+    assert card_extra_module_url() == card_module_url()
