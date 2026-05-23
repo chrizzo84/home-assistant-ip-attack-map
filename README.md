@@ -94,10 +94,10 @@ Die Custom Card zeigt eine **Tabelle**: IP/Host, Herkunft (Stadt/Land/ISP), Vers
 
 ### Karte lädt nicht („Custom element doesn't exist“)
 
-1. Integration auf **0.2.2+** aktualisieren (HACS) und **Home Assistant neu starten**
+1. Integration auf **0.2.3+** aktualisieren (HACS) und **Home Assistant neu starten**
 2. Einmal **hart neu laden** (Cmd+Shift+R), Dashboard neu öffnen
-3. Im Log sollten erscheinen: `registered as frontend module` und/oder `Registered IP Attack Map Lovelace resource`
-4. Alte manuelle Ressourcen unter **Einstellungen → Dashboards → Ressourcen** (z. B. `/local/ip_attack_map/...`) können **entfernt** werden — die Integration nutzt `/api/ip_attack_map/card/ip-attack-map-card.js`
+3. Im Log sollten erscheinen: `Published IP Attack Map card for Lovelace` und `Registered IP Attack Map Lovelace resource` (URL `/local/ip_attack_map/...`)
+4. Unter **Einstellungen → Dashboards → Ressourcen** darf höchstens **ein** Eintrag für die Karte stehen (`/local/ip_attack_map/ip-attack-map-card.js`, Typ Modul). Alte `/api/ip_attack_map/...`-Einträge löschen.
 
 Nur bei **Lovelace komplett in YAML** (selten): Ressource einmalig in `ui-lovelace.yaml` eintragen — URL wie oben, Typ `module`.
 

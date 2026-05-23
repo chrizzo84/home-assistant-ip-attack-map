@@ -10,7 +10,7 @@ from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN
 from .coordinator import IpAttackMapCoordinator
-from .frontend import async_listen_for_card_frontend
+from .frontend import async_ensure_card_assets, async_listen_for_card_frontend
 from .listener import NotificationListener, async_import_ip_bans
 
 _LOGGER = logging.getLogger(__name__)
@@ -20,6 +20,7 @@ PLATFORMS = ["geo_location", "sensor"]
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Register the Lovelace card (once per Home Assistant, not per config entry)."""
+    await async_ensure_card_assets(hass)
     async_listen_for_card_frontend(hass)
     return True
 
@@ -39,6 +40,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await async_import_ip_bans(hass, coordinator)
     await coordinator.async_refresh()
 
+    # Re-publish card and ensure Lovelace resource after integration is configured.
+    hass.async_create_task(async_ensure_card_assets(hass))
+    hass.async_create_task(
+        _async_register_card_resource(hass)
+    )
+
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     return True
 
@@ -53,6 +60,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         coordinator: IpAttackMapCoordinator = hass.data[DOMAIN].pop(entry.entry_id)
         await coordinator.async_shutdown()
     return unload_ok
+
+
+async def _async_register_card_resource(hass: HomeAssistant) -> None:
+    """Register Lovelace resource when config entry loads."""
+    from .frontend import async_register_lovelace_resource
+
+    await async_register_lovelace_resource(hass)
 
 
 async def _async_update_listener(

@@ -4,8 +4,10 @@ import pytest
 
 from custom_components.ip_attack_map.frontend import (
     CARD_API_URL,
+    LOCAL_CARD_URL,
     _async_maybe_await,
     _is_our_card_resource,
+    _resource_is_current,
     _url_path,
     _url_version,
     card_module_url,
@@ -27,8 +29,8 @@ async def test_async_maybe_await_coroutine() -> None:
 
 def test_card_module_url_includes_version() -> None:
     url = card_module_url()
-    assert url.startswith(CARD_API_URL)
-    assert "v=0.2.2" in url
+    assert url.startswith(LOCAL_CARD_URL)
+    assert "v=0.2.3" in url
 
 
 def test_url_path_strips_query() -> None:
@@ -42,5 +44,10 @@ def test_url_version() -> None:
 
 def test_is_our_card_resource() -> None:
     assert _is_our_card_resource(CARD_API_URL)
-    assert _is_our_card_resource(f"{CARD_API_URL}?v=1")
-    assert _is_our_card_resource("/local/ip_attack_map/ip-attack-map-card.js") is False
+    assert _is_our_card_resource(f"{LOCAL_CARD_URL}?v=1")
+    assert _is_our_card_resource("/other/card.js") is False
+
+
+def test_resource_is_current() -> None:
+    assert _resource_is_current(f"{LOCAL_CARD_URL}?v=0.2.3") is True
+    assert _resource_is_current(f"{CARD_API_URL}?v=0.2.3") is False
