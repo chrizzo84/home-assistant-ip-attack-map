@@ -6,8 +6,10 @@ import asyncio
 import logging
 from pathlib import Path
 
-from geoip2.database import Reader
-from geoip2.errors import AddressNotFoundError
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from geoip2.database import Reader
 
 from .base import GeoIpProvider, GeoResult
 
@@ -28,11 +30,13 @@ class MaxMindGeoIpProvider(GeoIpProvider):
                 raise FileNotFoundError(
                     f"MaxMind database not found: {self._db_path}"
                 )
+            from geoip2.database import Reader
             self._reader = Reader(str(self._db_path))
         return self._reader
 
     def lookup_sync(self, ip: str) -> GeoResult | None:
         """Synchronous lookup for use in executor."""
+        from geoip2.errors import AddressNotFoundError
         try:
             response = self._get_reader().city(ip)
         except AddressNotFoundError:
